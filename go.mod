@@ -1,4 +1,4 @@
-module tfdocs-extra
+module github.com/allejo/tfdocs-extra
 
 go 1.24.0
 

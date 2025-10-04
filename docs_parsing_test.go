@@ -1,4 +1,4 @@
-package main
+package tfdocextras
 
 import (
 	"reflect"
@@ -18,19 +18,19 @@ func strPtr(s string) *string {
 }
 
 func TestParseDocBlock_WithLineComments(t *testing.T) {
-	lines := []AstDocString{
-		AstDocString("This is a description"),
-		AstDocString("It spans multiple lines"),
-		AstDocString("@since 1.0.0"),
-		AstDocString("@param name The name parameter"),
+	lines := []astDocString{
+		astDocString("This is a description"),
+		astDocString("It spans multiple lines"),
+		astDocString("@since 1.0.0"),
+		astDocString("@param name The name parameter"),
 	}
 
-	block := AstDocBlock{
+	block := astDocBlock{
 		Lines: lines,
 		Block: nil,
 	}
 
-	result := ParseDocBlock(block)
+	result := parseDocBlock(block)
 
 	expectedContent := []string{
 		"This is a description",
@@ -56,14 +56,14 @@ func TestParseDocBlock_WithLineComments(t *testing.T) {
 }
 
 func TestParseDocBlock_WithBlockComment(t *testing.T) {
-	blockContent := AstDocBlockString("This is a block comment\nWith multiple lines\n@deprecated Use new function\n@since 2.0.0")
+	blockContent := astDocBlockString("This is a block comment\nWith multiple lines\n@deprecated Use new function\n@since 2.0.0")
 
-	block := AstDocBlock{
+	block := astDocBlock{
 		Lines: nil,
 		Block: &blockContent,
 	}
 
-	result := ParseDocBlock(block)
+	result := parseDocBlock(block)
 
 	expectedContent := []string{
 		"This is a block comment",
@@ -89,21 +89,21 @@ func TestParseDocBlock_WithBlockComment(t *testing.T) {
 }
 
 func TestParseDocBlock_MixedContent(t *testing.T) {
-	lines := []AstDocString{
-		AstDocString("  Leading whitespace should be trimmed  "),
-		AstDocString(""),
-		AstDocString("Empty lines are preserved"),
-		AstDocString("@example some code example"),
-		AstDocString("More content after directive"),
-		AstDocString("@returns boolean value"),
+	lines := []astDocString{
+		astDocString("  Leading whitespace should be trimmed  "),
+		astDocString(""),
+		astDocString("Empty lines are preserved"),
+		astDocString("@example some code example"),
+		astDocString("More content after directive"),
+		astDocString("@returns boolean value"),
 	}
 
-	block := AstDocBlock{
+	block := astDocBlock{
 		Lines: lines,
 		Block: nil,
 	}
 
-	result := ParseDocBlock(block)
+	result := parseDocBlock(block)
 
 	// Check content (whitespace should be trimmed)
 	expectedContent := []string{
@@ -128,19 +128,19 @@ func TestParseDocBlock_MixedContent(t *testing.T) {
 }
 
 func TestParseDocBlock_DirectiveWithoutContent(t *testing.T) {
-	lines := []AstDocString{
-		AstDocString("Some description"),
-		AstDocString("@deprecated"),
-		AstDocString("@internal"),
-		AstDocString("@final"),
+	lines := []astDocString{
+		astDocString("Some description"),
+		astDocString("@deprecated"),
+		astDocString("@internal"),
+		astDocString("@final"),
 	}
 
-	block := AstDocBlock{
+	block := astDocBlock{
 		Lines: lines,
 		Block: nil,
 	}
 
-	result := ParseDocBlock(block)
+	result := parseDocBlock(block)
 
 	expectedContent := []string{"Some description"}
 	if !reflect.DeepEqual(result.Content, expectedContent) {
@@ -160,18 +160,18 @@ func TestParseDocBlock_DirectiveWithoutContent(t *testing.T) {
 }
 
 func TestParseDocBlock_OnlyDirectives(t *testing.T) {
-	lines := []AstDocString{
-		AstDocString("@since 1.0.0"),
-		AstDocString("@author John Doe"),
-		AstDocString("@version 2.1.0"),
+	lines := []astDocString{
+		astDocString("@since 1.0.0"),
+		astDocString("@author John Doe"),
+		astDocString("@version 2.1.0"),
 	}
 
-	block := AstDocBlock{
+	block := astDocBlock{
 		Lines: lines,
 		Block: nil,
 	}
 
-	result := ParseDocBlock(block)
+	result := parseDocBlock(block)
 
 	// Should have no content, only directives
 	if len(result.Content) != 0 {
@@ -190,18 +190,18 @@ func TestParseDocBlock_OnlyDirectives(t *testing.T) {
 }
 
 func TestParseDocBlock_OnlyContent(t *testing.T) {
-	lines := []AstDocString{
-		AstDocString("This is just content"),
-		AstDocString("No directives here"),
-		AstDocString("Just plain documentation"),
+	lines := []astDocString{
+		astDocString("This is just content"),
+		astDocString("No directives here"),
+		astDocString("Just plain documentation"),
 	}
 
-	block := AstDocBlock{
+	block := astDocBlock{
 		Lines: lines,
 		Block: nil,
 	}
 
-	result := ParseDocBlock(block)
+	result := parseDocBlock(block)
 
 	expectedContent := []string{
 		"This is just content",
@@ -220,18 +220,18 @@ func TestParseDocBlock_OnlyContent(t *testing.T) {
 }
 
 func TestParseDocBlock_EmptyLines(t *testing.T) {
-	lines := []AstDocString{
-		AstDocString(""),
-		AstDocString("   "),
-		AstDocString("\t\t"),
+	lines := []astDocString{
+		astDocString(""),
+		astDocString("   "),
+		astDocString("\t\t"),
 	}
 
-	block := AstDocBlock{
+	block := astDocBlock{
 		Lines: lines,
 		Block: nil,
 	}
 
-	result := ParseDocBlock(block)
+	result := parseDocBlock(block)
 
 	// All lines should be trimmed to empty strings
 	expectedContent := []string{}
@@ -245,20 +245,20 @@ func TestParseDocBlock_EmptyLines(t *testing.T) {
 }
 
 func TestParseDocBlock_ComplexDirective(t *testing.T) {
-	lines := []AstDocString{
-		AstDocString("Function description"),
-		AstDocString("@param name string The user's name"),
-		AstDocString("@param age number The user's age in years"),
-		AstDocString("@returns {user: User} The created user object"),
-		AstDocString("@throws {ValidationError} When validation fails"),
+	lines := []astDocString{
+		astDocString("Function description"),
+		astDocString("@param name string The user's name"),
+		astDocString("@param age number The user's age in years"),
+		astDocString("@returns {user: User} The created user object"),
+		astDocString("@throws {ValidationError} When validation fails"),
 	}
 
-	block := AstDocBlock{
+	block := astDocBlock{
 		Lines: lines,
 		Block: nil,
 	}
 
-	result := ParseDocBlock(block)
+	result := parseDocBlock(block)
 
 	expectedContent := []string{"Function description"}
 	if !reflect.DeepEqual(result.Content, expectedContent) {
@@ -278,20 +278,20 @@ func TestParseDocBlock_ComplexDirective(t *testing.T) {
 }
 
 func TestParseDocBlock_EdgeCases(t *testing.T) {
-	lines := []AstDocString{
-		AstDocString("@ Invalid directive with space"),
-		AstDocString("@"),
-		AstDocString("@@double"),
-		AstDocString("@ "),
-		AstDocString("@valid content"),
+	lines := []astDocString{
+		astDocString("@ Invalid directive with space"),
+		astDocString("@"),
+		astDocString("@@double"),
+		astDocString("@ "),
+		astDocString("@valid content"),
 	}
 
-	block := AstDocBlock{
+	block := astDocBlock{
 		Lines: lines,
 		Block: nil,
 	}
 
-	result := ParseDocBlock(block)
+	result := parseDocBlock(block)
 
 	// The function treats ALL lines starting with @ as directives
 	// So there should be no content lines
@@ -315,12 +315,12 @@ func TestParseDocBlock_EdgeCases(t *testing.T) {
 
 func TestParseDocBlock_EmptyBlock(t *testing.T) {
 	// Test with empty Lines slice
-	block := AstDocBlock{
-		Lines: []AstDocString{},
+	block := astDocBlock{
+		Lines: []astDocString{},
 		Block: nil,
 	}
 
-	result := ParseDocBlock(block)
+	result := parseDocBlock(block)
 
 	if len(result.Content) != 0 {
 		t.Errorf("Expected no content for empty block, got %v", result.Content)
@@ -333,13 +333,13 @@ func TestParseDocBlock_EmptyBlock(t *testing.T) {
 
 func TestParseDocBlock_EmptyBlockString(t *testing.T) {
 	// Test with empty block string
-	emptyBlock := AstDocBlockString("")
-	block := AstDocBlock{
+	emptyBlock := astDocBlockString("")
+	block := astDocBlock{
 		Lines: nil,
 		Block: &emptyBlock,
 	}
 
-	result := ParseDocBlock(block)
+	result := parseDocBlock(block)
 
 	// Empty block string will result in one empty content line after splitting by newline
 	expectedContent := []string{}
@@ -354,14 +354,14 @@ func TestParseDocBlock_EmptyBlockString(t *testing.T) {
 
 func TestParseDocBlock_BlockWithNewlines(t *testing.T) {
 	// Test block comment with various newline patterns
-	blockContent := AstDocBlockString("First line\n\nSecond line after empty line\n@since 1.0.0\n\n@param test\n")
+	blockContent := astDocBlockString("First line\n\nSecond line after empty line\n@since 1.0.0\n\n@param test\n")
 
-	block := AstDocBlock{
+	block := astDocBlock{
 		Lines: nil,
 		Block: &blockContent,
 	}
 
-	result := ParseDocBlock(block)
+	result := parseDocBlock(block)
 
 	expectedContent := []string{
 		"First line",
@@ -385,29 +385,29 @@ func TestParseDocBlock_BlockWithNewlines(t *testing.T) {
 
 func TestFlattenSimpleTypes_PrimitiveTypes(t *testing.T) {
 	primitiveStr := "string"
-	primitiveObj := AstDataType{
+	primitiveObj := astDataType{
 		Primitive: &primitiveStr,
 	}
 
-	primitiveFlattened := FlattenSimpleTypes(primitiveObj)
+	primitiveFlattened := flattenSimpleTypes(primitiveObj)
 	if primitiveFlattened == nil || *primitiveFlattened != "string" {
 		t.Errorf("Expected 'string', got %v", primitiveFlattened)
 	}
 
 	numberStr := "30"
-	numberObj := AstDataType{
+	numberObj := astDataType{
 		Number: &numberStr,
 	}
-	numberFlattened := FlattenSimpleTypes(numberObj)
+	numberFlattened := flattenSimpleTypes(numberObj)
 	if numberFlattened == nil || *numberFlattened != "30" {
 		t.Errorf("Expected '30', got %v", numberFlattened)
 	}
 
 	stringStr := "\"hello\""
-	stringObj := AstDataType{
+	stringObj := astDataType{
 		String: &stringStr,
 	}
-	stringFlattened := FlattenSimpleTypes(stringObj)
+	stringFlattened := flattenSimpleTypes(stringObj)
 	if stringFlattened == nil || *stringFlattened != "\"hello\"" {
 		t.Errorf("Expected '\"hello\"', got %v", stringFlattened)
 	}
@@ -417,10 +417,10 @@ func TestFlattenSimpleTypes_Functions(t *testing.T) {
 	genericType := "string"
 	defaultValue := "\"default\""
 
-	listObj := AstDataType{
-		Func: &AstFunction{
+	listObj := astDataType{
+		Func: &astFunction{
 			Name: "list",
-			Args: []*AstDataType{
+			Args: []*astDataType{
 				{
 					Primitive: &genericType,
 				},
@@ -428,15 +428,15 @@ func TestFlattenSimpleTypes_Functions(t *testing.T) {
 		},
 	}
 
-	fxnFlattened := FlattenSimpleTypes(listObj)
+	fxnFlattened := flattenSimpleTypes(listObj)
 	if fxnFlattened == nil || *fxnFlattened != "list(string)" {
 		t.Errorf("Expected \"list(string)\", got \"%s\"", optStr(fxnFlattened))
 	}
 
-	optionalObj := AstDataType{
-		Func: &AstFunction{
+	optionalObj := astDataType{
+		Func: &astFunction{
 			Name: "optional",
-			Args: []*AstDataType{
+			Args: []*astDataType{
 				{
 					Primitive: &genericType,
 				},
@@ -447,28 +447,28 @@ func TestFlattenSimpleTypes_Functions(t *testing.T) {
 		},
 	}
 
-	optionalFlattened := FlattenSimpleTypes(optionalObj)
+	optionalFlattened := flattenSimpleTypes(optionalObj)
 	if optionalFlattened == nil || *optionalFlattened != "optional(string, \"default\")" {
 		t.Errorf("Expected \"optional(string, \"default\")\", got \"%s\"", optStr(optionalFlattened))
 	}
 }
 
 func TestParseObjectBlock_AstObject(t *testing.T) {
-	obj := AstObject{
-		Pairs: []*AstObjectProperty{
+	obj := astObject{
+		Pairs: []*astObjectProperty{
 			{
-				Doc: &AstDocBlock{
-					Lines: []AstDocString{
-						AstDocString("The name of the user"),
-						AstDocString(""),
-						AstDocString("@since 1.0.0"),
+				Doc: &astDocBlock{
+					Lines: []astDocString{
+						astDocString("The name of the user"),
+						astDocString(""),
+						astDocString("@since 1.0.0"),
 					},
 				},
 				Key: "enable_managed_scaling_draining",
-				Value: &AstDataType{
-					Func: &AstFunction{
+				Value: &astDataType{
+					Func: &astFunction{
 						Name: "optional",
-						Args: []*AstDataType{
+						Args: []*astDataType{
 							{
 								Primitive: strPtr("bool"),
 							},
@@ -480,22 +480,22 @@ func TestParseObjectBlock_AstObject(t *testing.T) {
 				},
 			},
 			{
-				Doc: &AstDocBlock{
-					Lines: []AstDocString{
-						AstDocString("The age of the user"),
-						AstDocString(""),
-						AstDocString("@since 1.0.0"),
+				Doc: &astDocBlock{
+					Lines: []astDocString{
+						astDocString("The age of the user"),
+						astDocString(""),
+						astDocString("@since 1.0.0"),
 					},
 				},
 				Key: "enable_scale_in_protection",
-				Value: &AstDataType{
+				Value: &astDataType{
 					Primitive: strPtr("number"),
 				},
 			},
 		},
 	}
 
-	actual := ParseObjectBlock(obj)
+	actual := parseObjectBlock(obj)
 
 	if len(actual) != 2 {
 		t.Fatalf("Expected 2 fields, got %d", len(actual))
@@ -538,19 +538,19 @@ func TestParseObjectBlock_AstObject(t *testing.T) {
 }
 
 func TestParseObjectFunctionBlock_OptionalObject(t *testing.T) {
-	obj := AstFunction{
+	obj := astFunction{
 		Name: "optional",
-		Args: []*AstDataType{
+		Args: []*astDataType{
 			{
-				Func: &AstFunction{
+				Func: &astFunction{
 					Name: "object",
-					Args: []*AstDataType{
+					Args: []*astDataType{
 						{
-							Object: &AstObject{
-								Pairs: []*AstObjectProperty{
+							Object: &astObject{
+								Pairs: []*astObjectProperty{
 									{
 										Key: "name",
-										Value: &AstDataType{
+										Value: &astDataType{
 											Primitive: strPtr("string"),
 										},
 									},
@@ -563,7 +563,7 @@ func TestParseObjectFunctionBlock_OptionalObject(t *testing.T) {
 		},
 	}
 
-	objBlock := ParseObjectFunctionBlock(obj, "test_object")
+	objBlock := parseObjectFunctionBlock(obj, "test_object")
 
 	expected := ObjectGroup{
 		VariableMetadata: VariableMetadata{
@@ -604,36 +604,36 @@ func TestParseObjectFunctionBlock_OptionalObject(t *testing.T) {
 }
 
 func TestParseObjectFunctionBlock_NestedObject(t *testing.T) {
-	obj := AstFunction{
+	obj := astFunction{
 		Name: "optional",
-		Args: []*AstDataType{
+		Args: []*astDataType{
 			{
-				Func: &AstFunction{
+				Func: &astFunction{
 					Name: "object",
-					Args: []*AstDataType{
+					Args: []*astDataType{
 						{
-							Object: &AstObject{
-								Pairs: []*AstObjectProperty{
+							Object: &astObject{
+								Pairs: []*astObjectProperty{
 									{
 										Key: "name",
-										Value: &AstDataType{
+										Value: &astDataType{
 											Primitive: strPtr("string"),
 										},
 									},
 									{
 										Key: "address",
-										Value: &AstDataType{
-											Object: &AstObject{
-												Pairs: []*AstObjectProperty{
+										Value: &astDataType{
+											Object: &astObject{
+												Pairs: []*astObjectProperty{
 													{
 														Key: "street",
-														Value: &AstDataType{
+														Value: &astDataType{
 															Primitive: strPtr("string"),
 														},
 													},
 													{
 														Key: "city",
-														Value: &AstDataType{
+														Value: &astDataType{
 															Primitive: strPtr("string"),
 														},
 													},
@@ -650,7 +650,7 @@ func TestParseObjectFunctionBlock_NestedObject(t *testing.T) {
 		},
 	}
 
-	objBlock := ParseObjectFunctionBlock(obj, "user_profile")
+	objBlock := parseObjectFunctionBlock(obj, "user_profile")
 
 	if objBlock == nil {
 		t.Fatal("Expected non-nil ObjectGroup")
@@ -741,26 +741,26 @@ func TestParseObjectFunctionBlock_NestedObject(t *testing.T) {
 }
 
 func TestParseMapFunctionBlock_MapObject(t *testing.T) {
-	obj := AstFunction{
+	obj := astFunction{
 		Name: "map",
-		Args: []*AstDataType{
+		Args: []*astDataType{
 			{
-				Func: &AstFunction{
+				Func: &astFunction{
 					Name: "object",
-					Args: []*AstDataType{
+					Args: []*astDataType{
 						{
-							Object: &AstObject{
-								Pairs: []*AstObjectProperty{
+							Object: &astObject{
+								Pairs: []*astObjectProperty{
 									{
-										Doc: &AstDocBlock{
-											Lines: []AstDocString{
-												AstDocString("Specify the number of EC2 instances that should be running in the group"),
-												AstDocString(""),
-												AstDocString("@since 1.0.0"),
+										Doc: &astDocBlock{
+											Lines: []astDocString{
+												astDocString("Specify the number of EC2 instances that should be running in the group"),
+												astDocString(""),
+												astDocString("@since 1.0.0"),
 											},
 										},
 										Key: "desired_instances",
-										Value: &AstDataType{
+										Value: &astDataType{
 											Primitive: strPtr("number"),
 										},
 									},
@@ -773,7 +773,7 @@ func TestParseMapFunctionBlock_MapObject(t *testing.T) {
 		},
 	}
 
-	objBlock := ParseObjectFunctionBlock(obj, "instance_config")
+	objBlock := parseObjectFunctionBlock(obj, "instance_config")
 
 	if objBlock == nil {
 		t.Fatal("Expected non-nil ObjectGroup")
@@ -816,40 +816,40 @@ func TestParseMapFunctionBlock_MapObject(t *testing.T) {
 }
 
 func TestParseListFunctionBlock_ListObject(t *testing.T) {
-	obj := AstFunction{
+	obj := astFunction{
 		Name: "list",
-		Args: []*AstDataType{
+		Args: []*astDataType{
 			{
-				Func: &AstFunction{
+				Func: &astFunction{
 					Name: "object",
-					Args: []*AstDataType{
+					Args: []*astDataType{
 						{
-							Object: &AstObject{
-								Pairs: []*AstObjectProperty{
+							Object: &astObject{
+								Pairs: []*astObjectProperty{
 									{
-										Doc: &AstDocBlock{
-											Lines: []AstDocString{
-												AstDocString("The name of the server"),
-												AstDocString("@required true"),
+										Doc: &astDocBlock{
+											Lines: []astDocString{
+												astDocString("The name of the server"),
+												astDocString("@required true"),
 											},
 										},
 										Key: "server_name",
-										Value: &AstDataType{
+										Value: &astDataType{
 											Primitive: strPtr("string"),
 										},
 									},
 									{
-										Doc: &AstDocBlock{
-											Lines: []AstDocString{
-												AstDocString("The port number for the server"),
-												AstDocString("@default 80"),
+										Doc: &astDocBlock{
+											Lines: []astDocString{
+												astDocString("The port number for the server"),
+												astDocString("@default 80"),
 											},
 										},
 										Key: "port",
-										Value: &AstDataType{
-											Func: &AstFunction{
+										Value: &astDataType{
+											Func: &astFunction{
 												Name: "optional",
-												Args: []*AstDataType{
+												Args: []*astDataType{
 													{
 														Primitive: strPtr("number"),
 													},
@@ -869,7 +869,7 @@ func TestParseListFunctionBlock_ListObject(t *testing.T) {
 		},
 	}
 
-	objBlock := ParseObjectFunctionBlock(obj, "server_config")
+	objBlock := parseObjectFunctionBlock(obj, "server_config")
 
 	if objBlock == nil {
 		t.Fatal("Expected non-nil ObjectGroup")

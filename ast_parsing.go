@@ -1,4 +1,4 @@
-package main
+package tfdocextras
 
 import (
 	"strings"
@@ -7,22 +7,22 @@ import (
 	"github.com/alecthomas/participle/v2/lexer"
 )
 
-// AstDocString represents a documentation line with the `///` prefix stripped
-type AstDocString string
+// astDocString represents a documentation line with the `///` prefix stripped
+type astDocString string
 
-func (d *AstDocString) Capture(values []string) error {
+func (d *astDocString) Capture(values []string) error {
 	if len(values) > 0 {
 		stripped := strings.TrimPrefix(values[0], "///")
 		stripped = strings.TrimLeft(stripped, " \t")
-		*d = AstDocString(stripped)
+		*d = astDocString(stripped)
 	}
 	return nil
 }
 
-// AstDocBlockString represents a documentation block with `/**`, `*/`, and `*` prefixes stripped
-type AstDocBlockString string
+// astDocBlockString represents a documentation block with `/**`, `*/`, and `*` prefixes stripped
+type astDocBlockString string
 
-func (d *AstDocBlockString) Capture(values []string) error {
+func (d *astDocBlockString) Capture(values []string) error {
 	if len(values) > 0 {
 		content := values[0]
 		content = strings.TrimPrefix(content, "/**")
@@ -45,45 +45,45 @@ func (d *AstDocBlockString) Capture(values []string) error {
 		result := strings.Join(cleanLines, "\n")
 		result = strings.Trim(result, "\n")
 
-		*d = AstDocBlockString(result)
+		*d = astDocBlockString(result)
 	}
 	return nil
 }
 
-type AstDocBlock struct {
-	Lines []AstDocString     `  @DocLine+`
-	Block *AstDocBlockString `| @DocBlock`
+type astDocBlock struct {
+	Lines []astDocString     `  @DocLine+`
+	Block *astDocBlockString `| @DocBlock`
 }
 
-type AstDataType struct {
-	Func      *AstFunction `  @@`
-	Object    *AstObject   `| @@`
+type astDataType struct {
+	Func      *astFunction `  @@`
+	Object    *astObject   `| @@`
 	Primitive *string      `| @Ident`
 	Number    *string      `| @Number`
 	String    *string      `| @String`
 }
 
-type AstObjectProperty struct {
-	Doc   *AstDocBlock `@@?`
+type astObjectProperty struct {
+	Doc   *astDocBlock `@@?`
 	Key   string       `@Ident`
-	Value *AstDataType `"=" @@`
+	Value *astDataType `"=" @@`
 }
 
-type AstObject struct {
-	Pairs []*AstObjectProperty `"{" @@* "}"`
+type astObject struct {
+	Pairs []*astObjectProperty `"{" @@* "}"`
 }
 
-type AstFunction struct {
+type astFunction struct {
 	Name string         `@Ident`
-	Args []*AstDataType `"(" ( @@ ( "," @@ )* )? ")"`
+	Args []*astDataType `"(" ( @@ ( "," @@ )* )? ")"`
 }
 
-type AstRoot struct {
-	Expr *AstDataType `@@`
+type astRoot struct {
+	Expr *astDataType `@@`
 }
 
-func ParseAst(str string) (*AstRoot, error) {
-	parser, err := participle.Build[AstRoot](
+func parseAst(str string) (*astRoot, error) {
+	parser, err := participle.Build[astRoot](
 		participle.Lexer(lexer.MustSimple([]lexer.SimpleRule{
 			{"DocBlock", `/\*\*([^*]|\*+[^*/])*\*+/`},
 			{"DocLine", `///[^\n]*`},

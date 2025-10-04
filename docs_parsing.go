@@ -1,4 +1,4 @@
-package main
+package tfdocextras
 
 import (
 	"strings"
@@ -7,16 +7,19 @@ import (
 	"golang.org/x/text/language"
 )
 
+// DocDirective represents a documentation directive like @since, @param, etc.
 type DocDirective struct {
 	Name    string
 	Content string
 }
 
+// FieldDocBlock contains parsed documentation for a field
 type FieldDocBlock struct {
 	Content    []string
 	Directives []DocDirective
 }
 
+// VariableMetadata contains metadata about a variable or field
 type VariableMetadata struct {
 	Name          string
 	Documentation FieldDocBlock
@@ -25,12 +28,14 @@ type VariableMetadata struct {
 	DefaultValue  *string
 }
 
+// ObjectField represents a field within an object structure
 type ObjectField struct {
 	VariableMetadata
 
 	NestedDataType *ObjectGroup
 }
 
+// ObjectGroup represents a group of related object fields with documentation
 type ObjectGroup struct {
 	VariableMetadata
 
@@ -38,6 +43,7 @@ type ObjectGroup struct {
 	ParentDataType *string
 }
 
+// GetObjectName returns the CamelCase name for this object group
 func (o *ObjectGroup) GetObjectName() string {
 	if o.Name != "" {
 		// Convert to CamelCase
@@ -54,23 +60,23 @@ func (o *ObjectGroup) GetObjectName() string {
 	return "UnknownObject"
 }
 
-func extractObjectFromArg(arg *AstDataType) []ObjectField {
+func extractObjectFromArg(arg *astDataType) []ObjectField {
 	if arg.Func != nil && arg.Func.Name == "object" && len(arg.Func.Args) > 0 {
 		if arg.Func.Args[0].Object != nil {
-			return ParseObjectBlock(*arg.Func.Args[0].Object)
+			return parseObjectBlock(*arg.Func.Args[0].Object)
 		}
 	} else if arg.Object != nil {
-		return ParseObjectBlock(*arg.Object)
+		return parseObjectBlock(*arg.Object)
 	}
 
 	return nil
 }
 
-func isOptionalType(data AstDataType) bool {
+func isOptionalType(data astDataType) bool {
 	return data.Func != nil && data.Func.Name == "optional"
 }
 
-func iterateDocLines(block AstDocBlock, fn func(line string)) {
+func iterateDocLines(block astDocBlock, fn func(line string)) {
 	if block.Block != nil {
 		lines := strings.Split(string(*block.Block), "\n")
 		for _, line := range lines {
@@ -100,8 +106,8 @@ func newVariableMetadata(name string) VariableMetadata {
 	}
 }
 
-func parseNestedObject(field *ObjectField, obj *AstObject) {
-	nestedFields := ParseObjectBlock(*obj)
+func parseNestedObject(field *ObjectField, obj *astObject) {
+	nestedFields := parseObjectBlock(*obj)
 	nestedObjectGroup := &ObjectGroup{
 		VariableMetadata: VariableMetadata{
 			Name: field.VariableMetadata.Name,
@@ -119,23 +125,22 @@ func parseNestedObject(field *ObjectField, obj *AstObject) {
 	field.NestedDataType = nestedObjectGroup
 }
 
-func parseOptionalField(field *ObjectField, args []*AstDataType) {
+func parseOptionalField(field *ObjectField, args []*astDataType) {
 	field.VariableMetadata.Optional = true
 
 	if len(args) >= 1 {
-		if flattened := FlattenSimpleTypes(*args[0]); flattened != nil {
+		if flattened := flattenSimpleTypes(*args[0]); flattened != nil {
 			field.VariableMetadata.DataTypeStr = *flattened
 		}
 
 		if len(args) >= 2 {
-			if defaultFlattened := FlattenSimpleTypes(*args[1]); defaultFlattened != nil {
+			if defaultFlattened := flattenSimpleTypes(*args[1]); defaultFlattened != nil {
 				field.VariableMetadata.DefaultValue = defaultFlattened
 			}
 		}
 	}
 }
 
-// trimEmptyLines removes empty lines from the beginning and end of a slice
 func trimEmptyLines(lines []string) []string {
 	if len(lines) == 0 {
 		return lines
@@ -161,7 +166,7 @@ func trimEmptyLines(lines []string) []string {
 	return lines[start : end+1]
 }
 
-func FlattenSimpleTypes(data AstDataType) *string {
+func flattenSimpleTypes(data astDataType) *string {
 	if data.Primitive != nil {
 		return data.Primitive
 	} else if data.Number != nil {
@@ -174,7 +179,7 @@ func FlattenSimpleTypes(data AstDataType) *string {
 		// Build the function signature: "functionName(arg1, arg2, ...)"
 		var args []string
 		for _, arg := range data.Func.Args {
-			if argFlattened := FlattenSimpleTypes(*arg); argFlattened != nil {
+			if argFlattened := flattenSimpleTypes(*arg); argFlattened != nil {
 				args = append(args, *argFlattened)
 			}
 		}
@@ -186,7 +191,7 @@ func FlattenSimpleTypes(data AstDataType) *string {
 	return nil
 }
 
-func ParseDocBlock(block AstDocBlock) FieldDocBlock {
+func parseDocBlock(block astDocBlock) FieldDocBlock {
 	doc := FieldDocBlock{}
 
 	iterateDocLines(block, func(line string) {
@@ -213,7 +218,7 @@ func ParseDocBlock(block AstDocBlock) FieldDocBlock {
 	return doc
 }
 
-func ParseObjectBlock(obj AstObject) []ObjectField {
+func parseObjectBlock(obj astObject) []ObjectField {
 	var fields []ObjectField
 
 	for _, pair := range obj.Pairs {
@@ -222,12 +227,12 @@ func ParseObjectBlock(obj AstObject) []ObjectField {
 		}
 
 		if pair.Doc != nil {
-			field.VariableMetadata.Documentation = ParseDocBlock(*pair.Doc)
+			field.VariableMetadata.Documentation = parseDocBlock(*pair.Doc)
 		}
 
 		if isOptionalType(*pair.Value) {
 			parseOptionalField(&field, pair.Value.Func.Args)
-		} else if flattened := FlattenSimpleTypes(*pair.Value); flattened != nil {
+		} else if flattened := flattenSimpleTypes(*pair.Value); flattened != nil {
 			field.VariableMetadata.DataTypeStr = *flattened
 		} else if pair.Value.Object != nil {
 			parseNestedObject(&field, pair.Value.Object)
@@ -239,12 +244,7 @@ func ParseObjectBlock(obj AstObject) []ObjectField {
 	return fields
 }
 
-// ParseObjectFunctionBlock handles parsing of object-containing functions including:
-// - optional(object({...}))
-// - object({...})
-// - map(object({...}))
-// - list(object({...}))
-func ParseObjectFunctionBlock(fxn AstFunction, name string) *ObjectGroup {
+func parseObjectFunctionBlock(fxn astFunction, name string) *ObjectGroup {
 	collectionPrefix := ""
 
 	switch fxn.Name {
@@ -288,12 +288,28 @@ func ParseObjectFunctionBlock(fxn AstFunction, name string) *ObjectGroup {
 	return objGroup
 }
 
-func ParseIntoDocumentedGroup(root AstRoot, name string) *ObjectGroup {
+// ParseIntoDocumentedStruct parses a Terraform type definition string into a documented object group.
+// This is the main entry point for the library.
+//
+// Example usage:
+//
+//	group, err := ParseIntoDocumentedStruct(`optional(object({
+//	  /// The user's name
+//	  /// @since 1.0.0
+//	  name = string
+//	  age = optional(number, 18)
+//	}))`, "user_config")
+func ParseIntoDocumentedStruct(input string, name string) (*ObjectGroup, error) {
+	root, err := parseAst(input)
+	if err != nil {
+		return nil, err
+	}
+
 	value := root.Expr
 
 	if value.Func != nil {
-		return ParseObjectFunctionBlock(*value.Func, name)
+		return parseObjectFunctionBlock(*value.Func, name), nil
 	}
 
-	return nil
+	return nil, nil
 }

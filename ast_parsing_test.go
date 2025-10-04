@@ -1,4 +1,4 @@
-package main
+package tfdocextras
 
 import (
 	"testing"
@@ -7,17 +7,17 @@ import (
 func TestParse_SimpleFunction(t *testing.T) {
 	input := `map(string)`
 
-	result, err := ParseAst(input)
+	result, err := parseAst(input)
 	if err != nil {
-		t.Fatalf("ParseAst failed: %v", err)
+		t.Fatalf("parseAst failed: %v", err)
 	}
 
 	if result.Expr.Func == nil {
-		t.Fatal("Expected AstFunction, got nil")
+		t.Fatal("Expected astFunction, got nil")
 	}
 
 	if result.Expr.Func.Name != "map" {
-		t.Errorf("Expected AstFunction name 'map', got '%s'", result.Expr.Func.Name)
+		t.Errorf("Expected astFunction name 'map', got '%s'", result.Expr.Func.Name)
 	}
 
 	if len(result.Expr.Func.Args) != 1 {
@@ -32,9 +32,9 @@ func TestParse_SimpleFunction(t *testing.T) {
 func TestParse_NestedFunction(t *testing.T) {
 	input := `map(AstObject({ name = string age = number }))`
 
-	result, err := ParseAst(input)
+	result, err := parseAst(input)
 	if err != nil {
-		t.Fatalf("ParseAst failed: %v", err)
+		t.Fatalf("parseAst failed: %v", err)
 	}
 
 	// Check outer AstFunction
@@ -78,9 +78,9 @@ func TestParse_NestedFunction(t *testing.T) {
 func TestParse_Object(t *testing.T) {
 	input := `{ name = string age = number }`
 
-	result, err := ParseAst(input)
+	result, err := parseAst(input)
 	if err != nil {
-		t.Fatalf("ParseAst failed: %v", err)
+		t.Fatalf("parseAst failed: %v", err)
 	}
 
 	if result.Expr.Object == nil {
@@ -105,14 +105,14 @@ func TestParse_WithDocLineComments(t *testing.T) {
 		age = number
 	}`
 
-	result, err := ParseAst(input)
+	result, err := parseAst(input)
 	if err != nil {
-		t.Fatalf("ParseAst failed: %v", err)
+		t.Fatalf("parseAst failed: %v", err)
 	}
 
 	obj := result.Expr.Object
 	if obj == nil || len(obj.Pairs) != 2 {
-		t.Fatal("Expected AstObject with 2 properties")
+		t.Fatal("Expected astObject with 2 properties")
 	}
 
 	// Check documentation
@@ -147,9 +147,9 @@ func TestParse_WithDocBlockComment(t *testing.T) {
 		name = string
 	}`
 
-	result, err := ParseAst(input)
+	result, err := parseAst(input)
 	if err != nil {
-		t.Fatalf("ParseAst failed: %v", err)
+		t.Fatalf("parseAst failed: %v", err)
 	}
 
 	obj := result.Expr.Object
@@ -184,9 +184,9 @@ func TestParse_PrimitiveTypes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.input, func(t *testing.T) {
-			result, err := ParseAst(test.input)
+			result, err := parseAst(test.input)
 			if err != nil {
-				t.Fatalf("ParseAst failed for '%s': %v", test.input, err)
+				t.Fatalf("parseAst failed for '%s': %v", test.input, err)
 			}
 
 			switch test.field {
@@ -210,9 +210,9 @@ func TestParse_PrimitiveTypes(t *testing.T) {
 func TestParse_ComplexFunction(t *testing.T) {
 	input := `optional(number, 0)`
 
-	result, err := ParseAst(input)
+	result, err := parseAst(input)
 	if err != nil {
-		t.Fatalf("ParseAst failed: %v", err)
+		t.Fatalf("parseAst failed: %v", err)
 	}
 
 	fn := result.Expr.Func
@@ -238,9 +238,9 @@ func TestParse_ComplexFunction(t *testing.T) {
 func TestParse_EmptyObject(t *testing.T) {
 	input := `{}`
 
-	result, err := ParseAst(input)
+	result, err := parseAst(input)
 	if err != nil {
-		t.Fatalf("ParseAst failed: %v", err)
+		t.Fatalf("parseAst failed: %v", err)
 	}
 
 	if result.Expr.Object == nil {
@@ -263,7 +263,7 @@ func TestParse_InvalidSyntax(t *testing.T) {
 
 	for _, input := range invalidInputs {
 		t.Run(input, func(t *testing.T) {
-			_, err := ParseAst(input)
+			_, err := parseAst(input)
 			if err == nil {
 				t.Errorf("Expected error for invalid input '%s', but got none", input)
 			}
@@ -285,7 +285,7 @@ func TestDocString_Capture(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.input, func(t *testing.T) {
-			var docStr AstDocString
+			var docStr astDocString
 			err := docStr.Capture([]string{test.input})
 			if err != nil {
 				t.Fatalf("Capture failed: %v", err)
@@ -345,7 +345,7 @@ func TestDocBlockString_Capture(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			var docBlock AstDocBlockString
+			var docBlock astDocBlockString
 			err := docBlock.Capture([]string{test.input})
 			if err != nil {
 				t.Fatalf("Capture failed: %v", err)
@@ -359,7 +359,7 @@ func TestDocBlockString_Capture(t *testing.T) {
 }
 
 func TestDocString_Capture_EmptyInput(t *testing.T) {
-	var docStr AstDocString
+	var docStr astDocString
 	err := docStr.Capture([]string{})
 	if err != nil {
 		t.Errorf("Expected no error for empty input, got %v", err)
@@ -371,7 +371,7 @@ func TestDocString_Capture_EmptyInput(t *testing.T) {
 }
 
 func TestDocBlockString_Capture_EmptyInput(t *testing.T) {
-	var docBlock AstDocBlockString
+	var docBlock astDocBlockString
 	err := docBlock.Capture([]string{})
 	if err != nil {
 		t.Errorf("Expected no error for empty input, got %v", err)

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+
+	"github.com/allejo/tfdocs-extra"
 )
 
 func main() {
@@ -13,15 +15,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ast, err := ParseAst(string(data))
+	documented, err := tfdocextras.ParseIntoDocumentedStruct(string(data), "root_object")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	documented := ParseIntoDocumentedGroup(*ast, "root_object")
-
-	// Print the AST structure more clearly
 	astJSON, _ := json.MarshalIndent(documented, "", "  ")
 	fmt.Printf("%s\n", astJSON)
 }
