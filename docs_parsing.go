@@ -34,7 +34,8 @@ type ObjectField struct {
 type ObjectGroup struct {
 	VariableMetadata
 
-	Fields []ObjectField
+	Fields         []ObjectField
+	ParentDataType *string
 }
 
 func (o *ObjectGroup) GetObjectName() string {
@@ -210,6 +211,49 @@ func ParseFunctionBlock(fxn AstFunction, name string) *ObjectGroup {
 		if objectArg.Object != nil {
 			objGroup.Fields = ParseObjectBlock(*objectArg.Object)
 			objGroup.VariableMetadata.DataTypeStr = "object(" + objGroup.GetObjectName() + ")"
+		}
+	} else {
+		return nil
+	}
+
+	return objGroup
+}
+
+func ParseCollectionFunctionBlock(fxn AstFunction, name string) *ObjectGroup {
+	var parentType string
+
+	// Determine the parent type based on function name
+	switch fxn.Name {
+	case "map":
+		parentType = "map"
+	case "list":
+		parentType = "list"
+	default:
+		return nil
+	}
+
+	objGroup := &ObjectGroup{
+		VariableMetadata: VariableMetadata{
+			Name: name,
+		},
+		ParentDataType: &parentType,
+	}
+
+	// Handle collection(object({...})) - works for both map and list
+	if len(fxn.Args) > 0 {
+		firstArg := fxn.Args[0]
+
+		// Check if the first argument is an object function
+		if firstArg.Func != nil && firstArg.Func.Name == "object" && len(firstArg.Func.Args) > 0 {
+			objectArg := firstArg.Func.Args[0]
+			if objectArg.Object != nil {
+				objGroup.Fields = ParseObjectBlock(*objectArg.Object)
+				objGroup.VariableMetadata.DataTypeStr = parentType + "(object(" + objGroup.GetObjectName() + "))"
+			}
+		} else if firstArg.Object != nil {
+			// Handle direct collection({...})
+			objGroup.Fields = ParseObjectBlock(*firstArg.Object)
+			objGroup.VariableMetadata.DataTypeStr = parentType + "(object(" + objGroup.GetObjectName() + "))"
 		}
 	} else {
 		return nil

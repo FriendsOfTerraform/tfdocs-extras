@@ -728,3 +728,184 @@ func TestParseFunctionBlock_NestedObject(t *testing.T) {
 		t.Errorf("Expected object group %v, got %v", expected, *objBlock)
 	}
 }
+
+func TestParseMapFunctionBlock_MapObject(t *testing.T) {
+	obj := AstFunction{
+		Name: "map",
+		Args: []*AstDataType{
+			{
+				Func: &AstFunction{
+					Name: "object",
+					Args: []*AstDataType{
+						{
+							Object: &AstObject{
+								Pairs: []*AstObjectProperty{
+									{
+										Doc: &AstDocBlock{
+											Lines: []AstDocString{
+												AstDocString("Specify the number of EC2 instances that should be running in the group"),
+												AstDocString(""),
+												AstDocString("@since 1.0.0"),
+											},
+										},
+										Key: "desired_instances",
+										Value: &AstDataType{
+											Primitive: strPtr("number"),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	objBlock := ParseCollectionFunctionBlock(obj, "instance_config")
+
+	if objBlock == nil {
+		t.Fatal("Expected non-nil ObjectGroup")
+	}
+
+	expected := ObjectGroup{
+		VariableMetadata: VariableMetadata{
+			Name:        "instance_config",
+			DataTypeStr: "map(object(InstanceConfig))",
+		},
+		ParentDataType: strPtr("map"),
+		Fields: []ObjectField{
+			{
+				VariableMetadata: VariableMetadata{
+					Name: "desired_instances",
+					Documentation: FieldDocBlock{
+						Content: []string{
+							"Specify the number of EC2 instances that should be running in the group",
+							"",
+						},
+						Directives: []DocDirective{
+							{Name: "since", Content: "1.0.0"},
+						},
+					},
+					DataTypeStr:  "number",
+					Optional:     false,
+					DefaultValue: nil,
+				},
+				NestedDataType: nil,
+			},
+		},
+	}
+
+	if !reflect.DeepEqual(*objBlock, expected) {
+		t.Errorf("Expected object group %v, got %v", expected, *objBlock)
+	}
+}
+
+func TestParseListFunctionBlock_ListObject(t *testing.T) {
+	obj := AstFunction{
+		Name: "list",
+		Args: []*AstDataType{
+			{
+				Func: &AstFunction{
+					Name: "object",
+					Args: []*AstDataType{
+						{
+							Object: &AstObject{
+								Pairs: []*AstObjectProperty{
+									{
+										Doc: &AstDocBlock{
+											Lines: []AstDocString{
+												AstDocString("The name of the server"),
+												AstDocString("@required true"),
+											},
+										},
+										Key: "server_name",
+										Value: &AstDataType{
+											Primitive: strPtr("string"),
+										},
+									},
+									{
+										Doc: &AstDocBlock{
+											Lines: []AstDocString{
+												AstDocString("The port number for the server"),
+												AstDocString("@default 80"),
+											},
+										},
+										Key: "port",
+										Value: &AstDataType{
+											Func: &AstFunction{
+												Name: "optional",
+												Args: []*AstDataType{
+													{
+														Primitive: strPtr("number"),
+													},
+													{
+														Number: strPtr("80"),
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	objBlock := ParseCollectionFunctionBlock(obj, "server_config")
+
+	if objBlock == nil {
+		t.Fatal("Expected non-nil ObjectGroup")
+	}
+
+	expected := ObjectGroup{
+		VariableMetadata: VariableMetadata{
+			Name:        "server_config",
+			DataTypeStr: "list(object(ServerConfig))",
+		},
+		ParentDataType: strPtr("list"),
+		Fields: []ObjectField{
+			{
+				VariableMetadata: VariableMetadata{
+					Name: "server_name",
+					Documentation: FieldDocBlock{
+						Content: []string{
+							"The name of the server",
+						},
+						Directives: []DocDirective{
+							{Name: "required", Content: "true"},
+						},
+					},
+					DataTypeStr:  "string",
+					Optional:     false,
+					DefaultValue: nil,
+				},
+				NestedDataType: nil,
+			},
+			{
+				VariableMetadata: VariableMetadata{
+					Name: "port",
+					Documentation: FieldDocBlock{
+						Content: []string{
+							"The port number for the server",
+						},
+						Directives: []DocDirective{
+							{Name: "default", Content: "80"},
+						},
+					},
+					DataTypeStr:  "number",
+					Optional:     true,
+					DefaultValue: strPtr("80"),
+				},
+				NestedDataType: nil,
+			},
+		},
+	}
+
+	if !reflect.DeepEqual(*objBlock, expected) {
+		t.Errorf("Expected object group %v, got %v", expected, *objBlock)
+	}
+}
