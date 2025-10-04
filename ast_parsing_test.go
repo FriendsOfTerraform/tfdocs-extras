@@ -7,9 +7,9 @@ import (
 func TestParse_SimpleFunction(t *testing.T) {
 	input := `map(string)`
 
-	result, err := Parse(input)
+	result, err := ParseAst(input)
 	if err != nil {
-		t.Fatalf("Parse failed: %v", err)
+		t.Fatalf("ParseAst failed: %v", err)
 	}
 
 	if result.Expr.Func == nil {
@@ -32,9 +32,9 @@ func TestParse_SimpleFunction(t *testing.T) {
 func TestParse_NestedFunction(t *testing.T) {
 	input := `map(AstObject({ name = string age = number }))`
 
-	result, err := Parse(input)
+	result, err := ParseAst(input)
 	if err != nil {
-		t.Fatalf("Parse failed: %v", err)
+		t.Fatalf("ParseAst failed: %v", err)
 	}
 
 	// Check outer AstFunction
@@ -78,9 +78,9 @@ func TestParse_NestedFunction(t *testing.T) {
 func TestParse_Object(t *testing.T) {
 	input := `{ name = string age = number }`
 
-	result, err := Parse(input)
+	result, err := ParseAst(input)
 	if err != nil {
-		t.Fatalf("Parse failed: %v", err)
+		t.Fatalf("ParseAst failed: %v", err)
 	}
 
 	if result.Expr.Object == nil {
@@ -105,9 +105,9 @@ func TestParse_WithDocLineComments(t *testing.T) {
 		age = number
 	}`
 
-	result, err := Parse(input)
+	result, err := ParseAst(input)
 	if err != nil {
-		t.Fatalf("Parse failed: %v", err)
+		t.Fatalf("ParseAst failed: %v", err)
 	}
 
 	obj := result.Expr.Object
@@ -147,9 +147,9 @@ func TestParse_WithDocBlockComment(t *testing.T) {
 		name = string
 	}`
 
-	result, err := Parse(input)
+	result, err := ParseAst(input)
 	if err != nil {
-		t.Fatalf("Parse failed: %v", err)
+		t.Fatalf("ParseAst failed: %v", err)
 	}
 
 	obj := result.Expr.Object
@@ -184,9 +184,9 @@ func TestParse_PrimitiveTypes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.input, func(t *testing.T) {
-			result, err := Parse(test.input)
+			result, err := ParseAst(test.input)
 			if err != nil {
-				t.Fatalf("Parse failed for '%s': %v", test.input, err)
+				t.Fatalf("ParseAst failed for '%s': %v", test.input, err)
 			}
 
 			switch test.field {
@@ -210,9 +210,9 @@ func TestParse_PrimitiveTypes(t *testing.T) {
 func TestParse_ComplexFunction(t *testing.T) {
 	input := `optional(number, 0)`
 
-	result, err := Parse(input)
+	result, err := ParseAst(input)
 	if err != nil {
-		t.Fatalf("Parse failed: %v", err)
+		t.Fatalf("ParseAst failed: %v", err)
 	}
 
 	fn := result.Expr.Func
@@ -238,9 +238,9 @@ func TestParse_ComplexFunction(t *testing.T) {
 func TestParse_EmptyObject(t *testing.T) {
 	input := `{}`
 
-	result, err := Parse(input)
+	result, err := ParseAst(input)
 	if err != nil {
-		t.Fatalf("Parse failed: %v", err)
+		t.Fatalf("ParseAst failed: %v", err)
 	}
 
 	if result.Expr.Object == nil {
@@ -263,7 +263,7 @@ func TestParse_InvalidSyntax(t *testing.T) {
 
 	for _, input := range invalidInputs {
 		t.Run(input, func(t *testing.T) {
-			_, err := Parse(input)
+			_, err := ParseAst(input)
 			if err == nil {
 				t.Errorf("Expected error for invalid input '%s', but got none", input)
 			}

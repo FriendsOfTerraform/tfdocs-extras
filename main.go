@@ -13,7 +13,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ast, err := Parse(string(data))
+	ast, err := ParseAst(string(data))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

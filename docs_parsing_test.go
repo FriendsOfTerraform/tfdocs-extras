@@ -455,7 +455,7 @@ func TestFlattenSimpleTypes_Functions(t *testing.T) {
 	}
 }
 
-func TestParseObjectBlock_NonOptionalObject(t *testing.T) {
+func TestParseObjectBlock_AstObject(t *testing.T) {
 	obj := AstObject{
 		Pairs: []*AstObjectProperty{
 			{
@@ -505,32 +505,94 @@ func TestParseObjectBlock_NonOptionalObject(t *testing.T) {
 
 	expected := []ObjectField{
 		{
-			Name: "enable_managed_scaling_draining",
-			Documentation: FieldDocBlock{
-				Content: []string{"The name of the user", ""},
-				Directives: []DocDirective{
-					{Name: "since", Content: "1.0.0"},
+			VariableMetadata: VariableMetadata{
+				Name: "enable_managed_scaling_draining",
+				Documentation: FieldDocBlock{
+					Content: []string{"The name of the user", ""},
+					Directives: []DocDirective{
+						{Name: "since", Content: "1.0.0"},
+					},
 				},
+				Optional:     true,
+				DefaultValue: strPtr("true"),
 			},
 			PrimitiveDataType: "bool",
-			Optional:          true,
-			DefaultValue:      strPtr("true"),
 		},
 		{
-			Name: "enable_scale_in_protection",
-			Documentation: FieldDocBlock{
-				Content: []string{"The age of the user", ""},
-				Directives: []DocDirective{
-					{Name: "since", Content: "1.0.0"},
+			VariableMetadata: VariableMetadata{
+				Name: "enable_scale_in_protection",
+				Documentation: FieldDocBlock{
+					Content: []string{"The age of the user", ""},
+					Directives: []DocDirective{
+						{Name: "since", Content: "1.0.0"},
+					},
 				},
+				Optional:     false,
+				DefaultValue: nil,
 			},
 			PrimitiveDataType: "number",
-			Optional:          false,
-			DefaultValue:      nil,
 		},
 	}
 
 	if reflect.DeepEqual(actual, expected) != true {
 		t.Errorf("Expected fields %v, got %v", expected, actual)
+	}
+}
+
+func TestParseFunctionBlock_OptionalObject(t *testing.T) {
+	obj := AstFunction{
+		Name: "optional",
+		Args: []*AstDataType{
+			{
+				Func: &AstFunction{
+					Name: "object",
+					Args: []*AstDataType{
+						{
+							Object: &AstObject{
+								Pairs: []*AstObjectProperty{
+									{
+										Key: "name",
+										Value: &AstDataType{
+											Primitive: strPtr("string"),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	objBlock := ParseFunctionBlock(obj, "test_object")
+
+	expected := ObjectGroup{
+		VariableMetadata: VariableMetadata{
+			Name: "test_object",
+		},
+		Fields: []ObjectField{
+			{
+				VariableMetadata: VariableMetadata{
+					Documentation: FieldDocBlock{
+						Content:    []string{},
+						Directives: []DocDirective{},
+					},
+					Name:         "name",
+					Optional:     false,
+					DefaultValue: nil,
+				},
+				PrimitiveDataType: "string",
+				NestedDataType:    nil,
+			},
+		},
+	}
+
+	if objBlock == nil {
+		t.Fatal("Expected non-nil ObjectGroup")
+	}
+
+	if reflect.DeepEqual(*objBlock, expected) != true {
+		t.Errorf("Expected object group %v, got %v", expected, *objBlock)
 	}
 }

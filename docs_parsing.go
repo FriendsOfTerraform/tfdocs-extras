@@ -2,6 +2,9 @@ package main
 
 import (
 	"strings"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type DocDirective struct {
@@ -14,18 +17,40 @@ type FieldDocBlock struct {
 	Directives []DocDirective
 }
 
-type ObjectField struct {
-	Name              string
-	Documentation     FieldDocBlock
-	PrimitiveDataType string
-	NestedDataType    *ObjectField
-	Optional          bool
-	DefaultValue      *string
+type VariableMetadata struct {
+	Name          string
+	Documentation FieldDocBlock
+	Optional      bool
+	DefaultValue  *string
 }
 
-type VariableDocument struct {
-	Parent []string
+type ObjectField struct {
+	VariableMetadata
+
+	PrimitiveDataType string
+	NestedDataType    *ObjectField
+}
+
+type ObjectGroup struct {
+	VariableMetadata
+
 	Fields []ObjectField
+}
+
+func (o *ObjectGroup) GetObjectName() string {
+	if o.Name != "" {
+		// Convert to CamelCase
+		caser := cases.Title(language.English)
+		parts := strings.Split(o.Name, "_")
+
+		for i, part := range parts {
+			parts[i] = caser.String(part)
+		}
+
+		return strings.Join(parts, "")
+	}
+
+	return "UnknownObject"
 }
 
 func isOptionalType(data AstDataType) bool {
@@ -74,53 +99,6 @@ func FlattenSimpleTypes(data AstDataType) *string {
 	return nil
 }
 
-func ParseObjectBlock(obj AstObject) []ObjectField {
-	var fields []ObjectField
-
-	for _, pair := range obj.Pairs {
-		field := ObjectField{
-			Name: pair.Key,
-		}
-
-		if pair.Doc != nil {
-			field.Documentation = ParseDocBlock(*pair.Doc)
-		}
-
-		if isOptionalType(*pair.Value) {
-			field.Optional = true
-			if len(pair.Value.Func.Args) >= 1 {
-				if flattened := FlattenSimpleTypes(*pair.Value.Func.Args[0]); flattened != nil {
-					field.PrimitiveDataType = *flattened
-				}
-
-				if len(pair.Value.Func.Args) >= 2 {
-					if defaultFlattened := FlattenSimpleTypes(*pair.Value.Func.Args[1]); defaultFlattened != nil {
-						field.DefaultValue = defaultFlattened
-					}
-				}
-			}
-		} else {
-			if flattened := FlattenSimpleTypes(*pair.Value); flattened != nil {
-				field.PrimitiveDataType = *flattened
-			} else if pair.Value.Object != nil {
-				nestedFields := ParseObjectBlock(*pair.Value.Object)
-				if len(nestedFields) == 1 {
-					field.NestedDataType = &nestedFields[0]
-				} else if len(nestedFields) > 1 {
-					field.NestedDataType = &ObjectField{
-						Name:           "",
-						NestedDataType: nil,
-					}
-				}
-			}
-		}
-
-		fields = append(fields, field)
-	}
-
-	return fields
-}
-
 func ParseDocBlock(block AstDocBlock) FieldDocBlock {
 	doc := FieldDocBlock{}
 
@@ -146,8 +124,89 @@ func ParseDocBlock(block AstDocBlock) FieldDocBlock {
 	return doc
 }
 
-func ParseAstRoot(root AstRoot) ([]VariableDocument, error) {
-	var doc []VariableDocument
+func ParseObjectBlock(obj AstObject) []ObjectField {
+	var fields []ObjectField
 
-	return doc, nil
+	for _, pair := range obj.Pairs {
+		field := ObjectField{
+			VariableMetadata: VariableMetadata{
+				Name: pair.Key,
+				Documentation: FieldDocBlock{
+					Content:    []string{},
+					Directives: []DocDirective{},
+				},
+			},
+		}
+
+		if pair.Doc != nil {
+			field.VariableMetadata.Documentation = ParseDocBlock(*pair.Doc)
+		}
+
+		if isOptionalType(*pair.Value) {
+			field.VariableMetadata.Optional = true
+			if len(pair.Value.Func.Args) >= 1 {
+				if flattened := FlattenSimpleTypes(*pair.Value.Func.Args[0]); flattened != nil {
+					field.PrimitiveDataType = *flattened
+				}
+
+				if len(pair.Value.Func.Args) >= 2 {
+					if defaultFlattened := FlattenSimpleTypes(*pair.Value.Func.Args[1]); defaultFlattened != nil {
+						field.VariableMetadata.DefaultValue = defaultFlattened
+					}
+				}
+			}
+		} else {
+			if flattened := FlattenSimpleTypes(*pair.Value); flattened != nil {
+				field.PrimitiveDataType = *flattened
+			} else if pair.Value.Object != nil {
+				nestedFields := ParseObjectBlock(*pair.Value.Object)
+				if len(nestedFields) == 1 {
+					field.NestedDataType = &nestedFields[0]
+				} else if len(nestedFields) > 1 {
+					field.NestedDataType = &ObjectField{
+						VariableMetadata: VariableMetadata{
+							Name: "",
+						},
+						NestedDataType: nil,
+					}
+				}
+			}
+		}
+
+		fields = append(fields, field)
+	}
+
+	return fields
+}
+
+func ParseFunctionBlock(fxn AstFunction, name string) *ObjectGroup {
+	objGroup := &ObjectGroup{
+		VariableMetadata: VariableMetadata{
+			Name: name,
+		},
+	}
+
+	// Handle optional(object({...}))
+	if fxn.Name == "optional" && len(fxn.Args) > 0 {
+		firstArg := fxn.Args[0]
+
+		// Check if the first argument is an object function
+		if firstArg.Func != nil && firstArg.Func.Name == "object" && len(firstArg.Func.Args) > 0 {
+			objectArg := firstArg.Func.Args[0]
+			if objectArg.Object != nil {
+				objGroup.Fields = ParseObjectBlock(*objectArg.Object)
+			}
+		}
+	} else if fxn.Name == "object" && len(fxn.Args) > 0 {
+		// Handle direct object({...})
+		objectArg := fxn.Args[0]
+
+		if objectArg.Object != nil {
+			objGroup.Fields = ParseObjectBlock(*objectArg.Object)
+		}
+	} else {
+		return nil
+	}
+
+	return objGroup
 }

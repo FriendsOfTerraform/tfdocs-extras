@@ -82,7 +82,7 @@ type AstRoot struct {
 	Expr *AstDataType `@@`
 }
 
-func Parse(str string) (*AstRoot, error) {
+func ParseAst(str string) (*AstRoot, error) {
 	parser, err := participle.Build[AstRoot](
 		participle.Lexer(lexer.MustSimple([]lexer.SimpleRule{
 			{"DocBlock", `/\*\*([^*]|\*+[^*/])*\*+/`},
