@@ -513,10 +513,10 @@ func TestParseObjectBlock_AstObject(t *testing.T) {
 						{Name: "since", Content: "1.0.0"},
 					},
 				},
+				DataTypeStr:  "bool",
 				Optional:     true,
 				DefaultValue: strPtr("true"),
 			},
-			PrimitiveDataType: "bool",
 		},
 		{
 			VariableMetadata: VariableMetadata{
@@ -527,10 +527,10 @@ func TestParseObjectBlock_AstObject(t *testing.T) {
 						{Name: "since", Content: "1.0.0"},
 					},
 				},
+				DataTypeStr:  "number",
 				Optional:     false,
 				DefaultValue: nil,
 			},
-			PrimitiveDataType: "number",
 		},
 	}
 
@@ -569,7 +569,8 @@ func TestParseFunctionBlock_OptionalObject(t *testing.T) {
 
 	expected := ObjectGroup{
 		VariableMetadata: VariableMetadata{
-			Name: "test_object",
+			Name:        "test_object",
+			DataTypeStr: "object(TestObject)",
 		},
 		Fields: []ObjectField{
 			{
@@ -579,11 +580,11 @@ func TestParseFunctionBlock_OptionalObject(t *testing.T) {
 						Directives: []DocDirective{},
 					},
 					Name:         "name",
+					DataTypeStr:  "string",
 					Optional:     false,
 					DefaultValue: nil,
 				},
-				PrimitiveDataType: "string",
-				NestedDataType:    nil,
+				NestedDataType: nil,
 			},
 		},
 	}
@@ -652,7 +653,8 @@ func TestParseFunctionBlock_NestedObject(t *testing.T) {
 
 	expected := ObjectGroup{
 		VariableMetadata: VariableMetadata{
-			Name: "user_profile",
+			Name:        "user_profile",
+			DataTypeStr: "object(UserProfile)",
 		},
 		Fields: []ObjectField{
 			{
@@ -662,11 +664,11 @@ func TestParseFunctionBlock_NestedObject(t *testing.T) {
 						Directives: []DocDirective{},
 					},
 					Name:         "name",
+					DataTypeStr:  "string",
 					Optional:     false,
 					DefaultValue: nil,
 				},
-				PrimitiveDataType: "string",
-				NestedDataType:    nil,
+				NestedDataType: nil,
 			},
 			{
 				VariableMetadata: VariableMetadata{
@@ -675,10 +677,10 @@ func TestParseFunctionBlock_NestedObject(t *testing.T) {
 						Directives: []DocDirective{},
 					},
 					Name:         "address",
+					DataTypeStr:  "object(Address)",
 					Optional:     false,
 					DefaultValue: nil,
 				},
-				PrimitiveDataType: "object(Address)",
 				NestedDataType: &ObjectGroup{
 					VariableMetadata: VariableMetadata{
 						Name: "address",
@@ -697,11 +699,11 @@ func TestParseFunctionBlock_NestedObject(t *testing.T) {
 									Directives: []DocDirective{},
 								},
 								Name:         "street",
+								DataTypeStr:  "string",
 								Optional:     false,
 								DefaultValue: nil,
 							},
-							PrimitiveDataType: "string",
-							NestedDataType:    nil,
+							NestedDataType: nil,
 						},
 						{
 							VariableMetadata: VariableMetadata{
@@ -710,11 +712,11 @@ func TestParseFunctionBlock_NestedObject(t *testing.T) {
 									Directives: []DocDirective{},
 								},
 								Name:         "city",
+								DataTypeStr:  "string",
 								Optional:     false,
 								DefaultValue: nil,
 							},
-							PrimitiveDataType: "string",
-							NestedDataType:    nil,
+							NestedDataType: nil,
 						},
 					},
 				},

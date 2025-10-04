@@ -20,6 +20,7 @@ type FieldDocBlock struct {
 type VariableMetadata struct {
 	Name          string
 	Documentation FieldDocBlock
+	DataTypeStr   string
 	Optional      bool
 	DefaultValue  *string
 }
@@ -27,8 +28,7 @@ type VariableMetadata struct {
 type ObjectField struct {
 	VariableMetadata
 
-	PrimitiveDataType string
-	NestedDataType    *ObjectGroup
+	NestedDataType *ObjectGroup
 }
 
 type ObjectGroup struct {
@@ -146,7 +146,7 @@ func ParseObjectBlock(obj AstObject) []ObjectField {
 			field.VariableMetadata.Optional = true
 			if len(pair.Value.Func.Args) >= 1 {
 				if flattened := FlattenSimpleTypes(*pair.Value.Func.Args[0]); flattened != nil {
-					field.PrimitiveDataType = *flattened
+					field.VariableMetadata.DataTypeStr = *flattened
 				}
 
 				if len(pair.Value.Func.Args) >= 2 {
@@ -157,7 +157,7 @@ func ParseObjectBlock(obj AstObject) []ObjectField {
 			}
 		} else {
 			if flattened := FlattenSimpleTypes(*pair.Value); flattened != nil {
-				field.PrimitiveDataType = *flattened
+				field.VariableMetadata.DataTypeStr = *flattened
 			} else if pair.Value.Object != nil {
 				nestedFields := ParseObjectBlock(*pair.Value.Object)
 				nestedObjectGroup := &ObjectGroup{
@@ -173,7 +173,7 @@ func ParseObjectBlock(obj AstObject) []ObjectField {
 					Fields: nestedFields,
 				}
 
-				field.PrimitiveDataType = "object(" + nestedObjectGroup.GetObjectName() + ")"
+				field.VariableMetadata.DataTypeStr = "object(" + nestedObjectGroup.GetObjectName() + ")"
 				field.NestedDataType = nestedObjectGroup
 			}
 		}
@@ -200,6 +200,7 @@ func ParseFunctionBlock(fxn AstFunction, name string) *ObjectGroup {
 			objectArg := firstArg.Func.Args[0]
 			if objectArg.Object != nil {
 				objGroup.Fields = ParseObjectBlock(*objectArg.Object)
+				objGroup.VariableMetadata.DataTypeStr = "object(" + objGroup.GetObjectName() + ")"
 			}
 		}
 	} else if fxn.Name == "object" && len(fxn.Args) > 0 {
@@ -208,6 +209,7 @@ func ParseFunctionBlock(fxn AstFunction, name string) *ObjectGroup {
 
 		if objectArg.Object != nil {
 			objGroup.Fields = ParseObjectBlock(*objectArg.Object)
+			objGroup.VariableMetadata.DataTypeStr = "object(" + objGroup.GetObjectName() + ")"
 		}
 	} else {
 		return nil
