@@ -532,7 +532,7 @@ func TestParseObjectBlock_AstObject(t *testing.T) {
 		},
 	}
 
-	if reflect.DeepEqual(actual, expected) != true {
+	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Expected fields %v, got %v", expected, actual)
 	}
 }
@@ -598,7 +598,7 @@ func TestParseObjectFunctionBlock_OptionalObject(t *testing.T) {
 		t.Fatal("Expected non-nil ObjectGroup")
 	}
 
-	if reflect.DeepEqual(*objBlock, expected) != true {
+	if !reflect.DeepEqual(*objBlock, expected) {
 		t.Errorf("Expected object group %v, got %v", expected, *objBlock)
 	}
 }
@@ -735,7 +735,7 @@ func TestParseObjectFunctionBlock_NestedObject(t *testing.T) {
 		},
 	}
 
-	if reflect.DeepEqual(*objBlock, expected) != true {
+	if !reflect.DeepEqual(*objBlock, expected) {
 		t.Errorf("Expected object group %v, got %v", expected, *objBlock)
 	}
 }
