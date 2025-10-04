@@ -678,7 +678,7 @@ func TestParseFunctionBlock_NestedObject(t *testing.T) {
 					Optional:     false,
 					DefaultValue: nil,
 				},
-				PrimitiveDataType: "",
+				PrimitiveDataType: "object(Address)",
 				NestedDataType: &ObjectGroup{
 					VariableMetadata: VariableMetadata{
 						Name: "address",

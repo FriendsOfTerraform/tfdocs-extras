@@ -160,7 +160,7 @@ func ParseObjectBlock(obj AstObject) []ObjectField {
 				field.PrimitiveDataType = *flattened
 			} else if pair.Value.Object != nil {
 				nestedFields := ParseObjectBlock(*pair.Value.Object)
-				field.NestedDataType = &ObjectGroup{
+				nestedObjectGroup := &ObjectGroup{
 					VariableMetadata: VariableMetadata{
 						Name: pair.Key,
 						Documentation: FieldDocBlock{
@@ -172,6 +172,9 @@ func ParseObjectBlock(obj AstObject) []ObjectField {
 					},
 					Fields: nestedFields,
 				}
+
+				field.PrimitiveDataType = "object(" + nestedObjectGroup.GetObjectName() + ")"
+				field.NestedDataType = nestedObjectGroup
 			}
 		}
 
