@@ -539,7 +539,7 @@ func TestParseObjectBlock_AstObject(t *testing.T) {
 	}
 }
 
-func TestParseFunctionBlock_OptionalObject(t *testing.T) {
+func TestParseObjectFunctionBlock_OptionalObject(t *testing.T) {
 	obj := AstFunction{
 		Name: "optional",
 		Args: []*AstDataType{
@@ -565,12 +565,18 @@ func TestParseFunctionBlock_OptionalObject(t *testing.T) {
 		},
 	}
 
-	objBlock := ParseFunctionBlock(obj, "test_object")
+	objBlock := ParseObjectFunctionBlock(obj, "test_object")
 
 	expected := ObjectGroup{
 		VariableMetadata: VariableMetadata{
-			Name:        "test_object",
-			DataTypeStr: "object(TestObject)",
+			Name: "test_object",
+			Documentation: FieldDocBlock{
+				Content:    []string{},
+				Directives: []DocDirective{},
+			},
+			Optional:     true,
+			DefaultValue: nil,
+			DataTypeStr:  "object(TestObject)",
 		},
 		Fields: []ObjectField{
 			{
@@ -587,6 +593,7 @@ func TestParseFunctionBlock_OptionalObject(t *testing.T) {
 				NestedDataType: nil,
 			},
 		},
+		ParentDataType: strPtr(""),
 	}
 
 	if objBlock == nil {
@@ -598,7 +605,7 @@ func TestParseFunctionBlock_OptionalObject(t *testing.T) {
 	}
 }
 
-func TestParseFunctionBlock_NestedObject(t *testing.T) {
+func TestParseObjectFunctionBlock_NestedObject(t *testing.T) {
 	obj := AstFunction{
 		Name: "optional",
 		Args: []*AstDataType{
@@ -645,7 +652,7 @@ func TestParseFunctionBlock_NestedObject(t *testing.T) {
 		},
 	}
 
-	objBlock := ParseFunctionBlock(obj, "user_profile")
+	objBlock := ParseObjectFunctionBlock(obj, "user_profile")
 
 	if objBlock == nil {
 		t.Fatal("Expected non-nil ObjectGroup")
@@ -655,7 +662,13 @@ func TestParseFunctionBlock_NestedObject(t *testing.T) {
 		VariableMetadata: VariableMetadata{
 			Name:        "user_profile",
 			DataTypeStr: "object(UserProfile)",
+			Documentation: FieldDocBlock{
+				Content:    []string{},
+				Directives: []DocDirective{},
+			},
+			Optional: true,
 		},
+		ParentDataType: strPtr(""),
 		Fields: []ObjectField{
 			{
 				VariableMetadata: VariableMetadata{
@@ -762,7 +775,7 @@ func TestParseMapFunctionBlock_MapObject(t *testing.T) {
 		},
 	}
 
-	objBlock := ParseCollectionFunctionBlock(obj, "instance_config")
+	objBlock := ParseObjectFunctionBlock(obj, "instance_config")
 
 	if objBlock == nil {
 		t.Fatal("Expected non-nil ObjectGroup")
@@ -772,6 +785,10 @@ func TestParseMapFunctionBlock_MapObject(t *testing.T) {
 		VariableMetadata: VariableMetadata{
 			Name:        "instance_config",
 			DataTypeStr: "map(object(InstanceConfig))",
+			Documentation: FieldDocBlock{
+				Content:    []string{},
+				Directives: []DocDirective{},
+			},
 		},
 		ParentDataType: strPtr("map"),
 		Fields: []ObjectField{
@@ -855,7 +872,7 @@ func TestParseListFunctionBlock_ListObject(t *testing.T) {
 		},
 	}
 
-	objBlock := ParseCollectionFunctionBlock(obj, "server_config")
+	objBlock := ParseObjectFunctionBlock(obj, "server_config")
 
 	if objBlock == nil {
 		t.Fatal("Expected non-nil ObjectGroup")
@@ -865,6 +882,10 @@ func TestParseListFunctionBlock_ListObject(t *testing.T) {
 		VariableMetadata: VariableMetadata{
 			Name:        "server_config",
 			DataTypeStr: "list(object(ServerConfig))",
+			Documentation: FieldDocBlock{
+				Content:    []string{},
+				Directives: []DocDirective{},
+			},
 		},
 		ParentDataType: strPtr("list"),
 		Fields: []ObjectField{
