@@ -19,7 +19,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	documented := ParseIntoDocumentedGroup(*ast, "root_object")
+
 	// Print the AST structure more clearly
-	astJSON, _ := json.MarshalIndent(ast, "", "  ")
+	astJSON, _ := json.MarshalIndent(documented, "", "  ")
 	fmt.Printf("%s\n", astJSON)
 }

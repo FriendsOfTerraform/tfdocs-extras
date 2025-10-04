@@ -135,6 +135,32 @@ func parseOptionalField(field *ObjectField, args []*AstDataType) {
 	}
 }
 
+// trimEmptyLines removes empty lines from the beginning and end of a slice
+func trimEmptyLines(lines []string) []string {
+	if len(lines) == 0 {
+		return lines
+	}
+
+	// Find first non-empty line
+	start := 0
+	for start < len(lines) && lines[start] == "" {
+		start++
+	}
+
+	// Find last non-empty line
+	end := len(lines) - 1
+	for end >= start && lines[end] == "" {
+		end--
+	}
+
+	// If all lines are empty, return empty slice
+	if start > end {
+		return []string{}
+	}
+
+	return lines[start : end+1]
+}
+
 func FlattenSimpleTypes(data AstDataType) *string {
 	if data.Primitive != nil {
 		return data.Primitive
@@ -181,6 +207,8 @@ func ParseDocBlock(block AstDocBlock) FieldDocBlock {
 			doc.Content = append(doc.Content, strings.TrimSpace(line))
 		}
 	})
+
+	doc.Content = trimEmptyLines(doc.Content)
 
 	return doc
 }
@@ -258,4 +286,14 @@ func ParseObjectFunctionBlock(fxn AstFunction, name string) *ObjectGroup {
 	}
 
 	return objGroup
+}
+
+func ParseIntoDocumentedGroup(root AstRoot, name string) *ObjectGroup {
+	value := root.Expr
+
+	if value.Func != nil {
+		return ParseObjectFunctionBlock(*value.Func, name)
+	}
+
+	return nil
 }

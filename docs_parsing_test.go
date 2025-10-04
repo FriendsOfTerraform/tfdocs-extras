@@ -234,7 +234,7 @@ func TestParseDocBlock_EmptyLines(t *testing.T) {
 	result := ParseDocBlock(block)
 
 	// All lines should be trimmed to empty strings
-	expectedContent := []string{"", "", ""}
+	expectedContent := []string{}
 	if !reflect.DeepEqual(result.Content, expectedContent) {
 		t.Errorf("Expected content %v, got %v", expectedContent, result.Content)
 	}
@@ -342,7 +342,7 @@ func TestParseDocBlock_EmptyBlockString(t *testing.T) {
 	result := ParseDocBlock(block)
 
 	// Empty block string will result in one empty content line after splitting by newline
-	expectedContent := []string{""}
+	expectedContent := []string{}
 	if !reflect.DeepEqual(result.Content, expectedContent) {
 		t.Errorf("Expected content %v for empty block string, got %v", expectedContent, result.Content)
 	}
@@ -367,8 +367,6 @@ func TestParseDocBlock_BlockWithNewlines(t *testing.T) {
 		"First line",
 		"",
 		"Second line after empty line",
-		"",
-		"",
 	}
 
 	if !reflect.DeepEqual(result.Content, expectedContent) {
@@ -508,7 +506,7 @@ func TestParseObjectBlock_AstObject(t *testing.T) {
 			VariableMetadata: VariableMetadata{
 				Name: "enable_managed_scaling_draining",
 				Documentation: FieldDocBlock{
-					Content: []string{"The name of the user", ""},
+					Content: []string{"The name of the user"},
 					Directives: []DocDirective{
 						{Name: "since", Content: "1.0.0"},
 					},
@@ -522,7 +520,7 @@ func TestParseObjectBlock_AstObject(t *testing.T) {
 			VariableMetadata: VariableMetadata{
 				Name: "enable_scale_in_protection",
 				Documentation: FieldDocBlock{
-					Content: []string{"The age of the user", ""},
+					Content: []string{"The age of the user"},
 					Directives: []DocDirective{
 						{Name: "since", Content: "1.0.0"},
 					},
@@ -798,7 +796,6 @@ func TestParseMapFunctionBlock_MapObject(t *testing.T) {
 					Documentation: FieldDocBlock{
 						Content: []string{
 							"Specify the number of EC2 instances that should be running in the group",
-							"",
 						},
 						Directives: []DocDirective{
 							{Name: "since", Content: "1.0.0"},
