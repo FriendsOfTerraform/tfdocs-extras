@@ -596,3 +596,133 @@ func TestParseFunctionBlock_OptionalObject(t *testing.T) {
 		t.Errorf("Expected object group %v, got %v", expected, *objBlock)
 	}
 }
+
+func TestParseFunctionBlock_NestedObject(t *testing.T) {
+	obj := AstFunction{
+		Name: "optional",
+		Args: []*AstDataType{
+			{
+				Func: &AstFunction{
+					Name: "object",
+					Args: []*AstDataType{
+						{
+							Object: &AstObject{
+								Pairs: []*AstObjectProperty{
+									{
+										Key: "name",
+										Value: &AstDataType{
+											Primitive: strPtr("string"),
+										},
+									},
+									{
+										Key: "address",
+										Value: &AstDataType{
+											Object: &AstObject{
+												Pairs: []*AstObjectProperty{
+													{
+														Key: "street",
+														Value: &AstDataType{
+															Primitive: strPtr("string"),
+														},
+													},
+													{
+														Key: "city",
+														Value: &AstDataType{
+															Primitive: strPtr("string"),
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	objBlock := ParseFunctionBlock(obj, "user_profile")
+
+	if objBlock == nil {
+		t.Fatal("Expected non-nil ObjectGroup")
+	}
+
+	expected := ObjectGroup{
+		VariableMetadata: VariableMetadata{
+			Name: "user_profile",
+		},
+		Fields: []ObjectField{
+			{
+				VariableMetadata: VariableMetadata{
+					Documentation: FieldDocBlock{
+						Content:    []string{},
+						Directives: []DocDirective{},
+					},
+					Name:         "name",
+					Optional:     false,
+					DefaultValue: nil,
+				},
+				PrimitiveDataType: "string",
+				NestedDataType:    nil,
+			},
+			{
+				VariableMetadata: VariableMetadata{
+					Documentation: FieldDocBlock{
+						Content:    []string{},
+						Directives: []DocDirective{},
+					},
+					Name:         "address",
+					Optional:     false,
+					DefaultValue: nil,
+				},
+				PrimitiveDataType: "",
+				NestedDataType: &ObjectGroup{
+					VariableMetadata: VariableMetadata{
+						Name: "address",
+						Documentation: FieldDocBlock{
+							Content:    []string{},
+							Directives: []DocDirective{},
+						},
+						Optional:     false,
+						DefaultValue: nil,
+					},
+					Fields: []ObjectField{
+						{
+							VariableMetadata: VariableMetadata{
+								Documentation: FieldDocBlock{
+									Content:    []string{},
+									Directives: []DocDirective{},
+								},
+								Name:         "street",
+								Optional:     false,
+								DefaultValue: nil,
+							},
+							PrimitiveDataType: "string",
+							NestedDataType:    nil,
+						},
+						{
+							VariableMetadata: VariableMetadata{
+								Documentation: FieldDocBlock{
+									Content:    []string{},
+									Directives: []DocDirective{},
+								},
+								Name:         "city",
+								Optional:     false,
+								DefaultValue: nil,
+							},
+							PrimitiveDataType: "string",
+							NestedDataType:    nil,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if reflect.DeepEqual(*objBlock, expected) != true {
+		t.Errorf("Expected object group %v, got %v", expected, *objBlock)
+	}
+}

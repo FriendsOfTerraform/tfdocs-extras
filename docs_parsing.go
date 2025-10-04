@@ -28,7 +28,7 @@ type ObjectField struct {
 	VariableMetadata
 
 	PrimitiveDataType string
-	NestedDataType    *ObjectField
+	NestedDataType    *ObjectGroup
 }
 
 type ObjectGroup struct {
@@ -160,15 +160,17 @@ func ParseObjectBlock(obj AstObject) []ObjectField {
 				field.PrimitiveDataType = *flattened
 			} else if pair.Value.Object != nil {
 				nestedFields := ParseObjectBlock(*pair.Value.Object)
-				if len(nestedFields) == 1 {
-					field.NestedDataType = &nestedFields[0]
-				} else if len(nestedFields) > 1 {
-					field.NestedDataType = &ObjectField{
-						VariableMetadata: VariableMetadata{
-							Name: "",
+				field.NestedDataType = &ObjectGroup{
+					VariableMetadata: VariableMetadata{
+						Name: pair.Key,
+						Documentation: FieldDocBlock{
+							Content:    []string{},
+							Directives: []DocDirective{},
 						},
-						NestedDataType: nil,
-					}
+						Optional:     false,
+						DefaultValue: nil,
+					},
+					Fields: nestedFields,
 				}
 			}
 		}
