@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/allejo/tfdocs-extra"
+	"github.com/FriendsOfTerraform/tfdocs-extras"
 )
 
 func main() {

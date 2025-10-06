@@ -7,7 +7,7 @@ After writing an [RFC for features that would be useful to the community](https:
 ## Installation
 
 ```bash
-go get github.com/allejo/tfdocs-extra
+go get github.com/FriendsOfTerraform/tfdocs-extras
 ```
 
 ## Public API
@@ -148,7 +148,7 @@ import (
     "fmt"
     "os"
 
-    "github.com/allejo/tfdocs-extra"
+    "github.com/FriendsOfTerraform/tfdocs-extras"
 )
 
 func main() {
