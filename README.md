@@ -1,3 +1,21 @@
+> [!WARNING]
+>
+> This library is stable enough for experimental use; however, it is not recommended for production code just yet.
+
+> [!IMPORTANT]
+>
+> I am a frontend developer, and besides knowing what Terraform is, I have no experience using it. I built this library to solve a problem we have managing documentation in our FriendsOfTerraform organization.
+>
+> My goal is to eventually integrate this library into [Terraform Docs](https://github.com/terraform-docs/terraform-docs) either as a plugin or built-in functionality. Considering that I barely started learning Go about a month ago, I have no idea what the best approach for integrating this library into Terraform Docs is; feedback and direction are highly appreciated.
+>
+> Like everybody else, I have multiple things in my life that require my attention, so if you'd like to encourage me to work on this, here's how you can do so:
+> 
+> - Provide feedback on this library (e.g. missing features, bug reports, etc.)
+> - Star this repository / follow me on GitHub
+> - [Sponsor me on GitHub](https://github.com/sponsors/allejo)
+>
+> \- [@allejo](https://github.com/allejo)
+
 # Terraform Documentation Extras (tfdocs-extras)
 
 A Go library for parsing an `object()` Terraform type definition string into a documented structure.  Support for [documenting nested objects has been a feature request dating back to April 2020](https://github.com/terraform-docs/terraform-docs/issues/242). The biggest challenge is that [Terraform Docs](https://github.com/terraform-docs/terraform-docs) does not parse the `object()` type definition itself and returns it as a raw string; this library fills that gap.
