@@ -50,109 +50,333 @@ These types are exported so you can work with the results:
 - `FieldDocBlock` - Parsed documentation for a field
 - `DocDirective` - Documentation directives like `@since`, `@param`, etc.
 
-### Method
-
-- `(*ObjectGroup).GetObjectName() string` - Returns CamelCase name for the object group
-
 ## Example Usage
 
 Let's say you have the following Terraform variable definition:
 
 ```terraform
-variable "default_capacity_provider_strategy" {
-  type = map(object({
-    /// The relative percentage of the total number of launched tasks that should use the specified capacity provider.
-    /// `weight` is taken into consideration only after the `base` count of tasks has been satisfied.
-    ///
+variable "network_interface" {
+  type = object({
+    /// List of security group IDs attached to this ENI
     /// @since 1.0.0
-    base = optional(number, 0)
+    security_group_ids                 = list(string)
 
-    /**
-     * The number of tasks, at a minimum, to run on the specified capacity provider. Only one capacity provider in a
-     * capacity provider strategy can have `base` defined. Defaults to `0`.
-     *
-     * @since 1.0.0
-     */
-    weight = number
-  }))
-  description = "Specify the default capacity provider strategy that is used when creating services in the cluster"
-  default     = {}
+    /// Specify the subnet ID this ENI is created on
+    /// @since 1.0.0
+    subnet_id                          = string
+
+    /// Additional tags for the ENI
+    /// @since 1.0.0
+    additional_tags                    = optional(map(string), {})
+
+    /// Specify the description of the ENI
+    /// @since 1.0.0
+    description                        = optional(string)
+
+    /// Enables [elastic fabric adapter][elastic-fabric-adapter]
+    /// @since 1.0.0
+    enable_elastic_fabric_adapter      = optional(bool, false)
+
+    /// Controls if traffic is routed to the instance when the destination address does not match the instance. Used for NAT or VPNs
+    /// @since 1.0.0
+    enable_source_destination_checking = optional(bool, true)
+
+    /// Configures custom private IP addresses for the ENI.
+    /// @since 1.0.0
+    private_ip_addresses = optional(object({
+      /// List of private IPv4 addresses to assign to the ENI, the first address will be used as the primary IP address
+      /// @since 1.0.0
+      ipv4 = optional(list(string))
+    }))
+
+    /// Assigns a private CIDR range, either automatically or manually, to the ENI. By assigning [prefixes][ec2-prefixes], you scale and simplify the management of applications, including container and networking applications that require multiple IP addresses on an instance. Network interfaces with prefixes are supported with [instances built on the Nitro System][nitro-system-type].
+    /// @since 1.0.0
+    prefix_delegation = optional(object({
+      /// Configures prefix delegation for IPV4
+      /// @since 1.0.0
+      ipv4 = optional(object({
+        /// Sepcify the number of prefixes AWS chooses from your VPC subnet’s IPv4 CIDR block and assigns it to your network interface. Mutually exclusive to `custom_prefixes`
+        /// @since 1.0.0
+        auto_assign_count = optional(number)
+
+        /// Specify the prefixes from your VPC subnet’s CIDR block to assign it to your network interface. Mutually exclusive to `auto_assign_count`
+        /// @since 1.0.0
+        custom_prefixes   = optional(list(string))
+      }))
+    }))
+  })
+  description = "Configures the primary network interface"
 }
 ```
 
 Terraform Docs will output the type as:
 
 ```terraform
-map(object({
-    /// The relative percentage of the total number of launched tasks that should use the specified capacity provider.
-    /// `weight` is taken into consideration only after the `base` count of tasks has been satisfied.
-    ///
+object({
+    /// List of security group IDs attached to this ENI
     /// @since 1.0.0
-    base = optional(number, 0)
+    security_group_ids                 = list(string)
 
-    /**
-     * The number of tasks, at a minimum, to run on the specified capacity provider. Only one capacity provider in a
-     * capacity provider strategy can have `base` defined. Defaults to `0`.
-     *
-     * @since 1.0.0
-     */
-    weight = number
-}))
+    /// Specify the subnet ID this ENI is created on
+    /// @since 1.0.0
+    subnet_id                          = string
+
+    /// Additional tags for the ENI
+    /// @since 1.0.0
+    additional_tags                    = optional(map(string), {})
+
+    /// Specify the description of the ENI
+    /// @since 1.0.0
+    description                        = optional(string)
+
+    /// Enables [elastic fabric adapter][elastic-fabric-adapter]
+    /// @since 1.0.0
+    enable_elastic_fabric_adapter      = optional(bool, false)
+
+    /// Controls if traffic is routed to the instance when the destination address does not match the instance. Used for NAT or VPNs
+    /// @since 1.0.0
+    enable_source_destination_checking = optional(bool, true)
+
+    /// Configures custom private IP addresses for the ENI.
+    /// @since 1.0.0
+    private_ip_addresses = optional(object({
+      /// List of private IPv4 addresses to assign to the ENI, the first address will be used as the primary IP address
+      /// @since 1.0.0
+      ipv4 = optional(list(string))
+    }))
+
+    /// Assigns a private CIDR range, either automatically or manually, to the ENI. By assigning [prefixes][ec2-prefixes], you scale and simplify the management of applications, including container and networking applications that require multiple IP addresses on an instance. Network interfaces with prefixes are supported with [instances built on the Nitro System][nitro-system-type].
+    /// @since 1.0.0
+    prefix_delegation = optional(object({
+      /// Configures prefix delegation for IPV4
+      /// @since 1.0.0
+      ipv4 = optional(object({
+        /// Sepcify the number of prefixes AWS chooses from your VPC subnet’s IPv4 CIDR block and assigns it to your network interface. Mutually exclusive to `custom_prefixes`
+        /// @since 1.0.0
+        auto_assign_count = optional(number)
+
+        /// Specify the prefixes from your VPC subnet’s CIDR block to assign it to your network interface. Mutually exclusive to `auto_assign_count`
+        /// @since 1.0.0
+        custom_prefixes   = optional(list(string))
+      }))
+    }))
+  })
 ```
 
 By calling `ParseIntoDocumentedGroup()` with the above string, you will get a structured representation of the object, including field names, types, optional status, default values, and parsed documentation.
 
 ```json
 {
-  "Name": "root_object",
-  "Documentation": {
-    "Content": [],
-    "Directives": []
+  "name": "root_object",
+  "documentation": {
+    "content": [],
+    "directives": []
   },
-  "DataTypeStr": "map(object(RootObject))",
-  "Optional": false,
-  "DefaultValue": null,
-  "Fields": [
+  "dataType": "object(RootObject)",
+  "optional": false,
+  "fields": [
     {
-      "Name": "base",
-      "Documentation": {
-        "Content": [
-          "The relative percentage of the total number of launched tasks that should use the specified capacity provider.",
-          "`weight` is taken into consideration only after the `base` count of tasks has been satisfied."
+      "name": "security_group_ids",
+      "documentation": {
+        "content": [
+          "List of security group IDs attached to this ENI"
         ],
-        "Directives": [
+        "directives": [
           {
-            "Name": "since",
-            "Content": "1.0.0"
+            "name": "since",
+            "content": "1.0.0"
           }
         ]
       },
-      "DataTypeStr": "number",
-      "Optional": true,
-      "DefaultValue": "0",
-      "NestedDataType": null
+      "dataType": "list(string)",
+      "optional": false
     },
     {
-      "Name": "weight",
-      "Documentation": {
-        "Content": [
-          "The number of tasks, at a minimum, to run on the specified capacity provider. Only one capacity provider in a",
-          "capacity provider strategy can have `base` defined. Defaults to `0`."
+      "name": "subnet_id",
+      "documentation": {
+        "content": [
+          "Specify the subnet ID this ENI is created on"
         ],
-        "Directives": [
+        "directives": [
           {
-            "Name": "since",
-            "Content": "1.0.0"
+            "name": "since",
+            "content": "1.0.0"
           }
         ]
       },
-      "DataTypeStr": "number",
-      "Optional": false,
-      "DefaultValue": null,
-      "NestedDataType": null
+      "dataType": "string",
+      "optional": false
+    },
+    {
+      "name": "additional_tags",
+      "documentation": {
+        "content": [
+          "Additional tags for the ENI"
+        ],
+        "directives": [
+          {
+            "name": "since",
+            "content": "1.0.0"
+          }
+        ]
+      },
+      "dataType": "map(string)",
+      "optional": true
+    },
+    {
+      "name": "description",
+      "documentation": {
+        "content": [
+          "Specify the description of the ENI"
+        ],
+        "directives": [
+          {
+            "name": "since",
+            "content": "1.0.0"
+          }
+        ]
+      },
+      "dataType": "string",
+      "optional": true
+    },
+    {
+      "name": "enable_elastic_fabric_adapter",
+      "documentation": {
+        "content": [
+          "Enables [elastic fabric adapter][elastic-fabric-adapter]"
+        ],
+        "directives": [
+          {
+            "name": "since",
+            "content": "1.0.0"
+          }
+        ]
+      },
+      "dataType": "bool",
+      "optional": true,
+      "defaultValue": "false"
+    },
+    {
+      "name": "enable_source_destination_checking",
+      "documentation": {
+        "content": [
+          "Controls if traffic is routed to the instance when the destination address does not match the instance. Used for NAT or VPNs"
+        ],
+        "directives": [
+          {
+            "name": "since",
+            "content": "1.0.0"
+          }
+        ]
+      },
+      "dataType": "bool",
+      "optional": true,
+      "defaultValue": "true"
+    },
+    {
+      "name": "private_ip_addresses",
+      "documentation": {
+        "content": [
+          "Configures custom private IP addresses for the ENI."
+        ],
+        "directives": [
+          {
+            "name": "since",
+            "content": "1.0.0"
+          }
+        ]
+      },
+      "dataType": "object(PrivateIpAddresses)",
+      "optional": true,
+      "nestedDataType": [
+        {
+          "name": "ipv4",
+          "documentation": {
+            "content": [
+              "List of private IPv4 addresses to assign to the ENI, the first address will be used as the primary IP address"
+            ],
+            "directives": [
+              {
+                "name": "since",
+                "content": "1.0.0"
+              }
+            ]
+          },
+          "dataType": "list(string)",
+          "optional": true
+        }
+      ]
+    },
+    {
+      "name": "prefix_delegation",
+      "documentation": {
+        "content": [
+          "Assigns a private CIDR range, either automatically or manually, to the ENI. By assigning [prefixes][ec2-prefixes], you scale and simplify the management of applications, including container and networking applications that require multiple IP addresses on an instance. Network interfaces with prefixes are supported with [instances built on the Nitro System][nitro-system-type]."
+        ],
+        "directives": [
+          {
+            "name": "since",
+            "content": "1.0.0"
+          }
+        ]
+      },
+      "dataType": "object(PrefixDelegation)",
+      "optional": true,
+      "nestedDataType": [
+        {
+          "name": "ipv4",
+          "documentation": {
+            "content": [
+              "Configures prefix delegation for IPV4"
+            ],
+            "directives": [
+              {
+                "name": "since",
+                "content": "1.0.0"
+              }
+            ]
+          },
+          "dataType": "object(Ipv4)",
+          "optional": true,
+          "nestedDataType": [
+            {
+              "name": "auto_assign_count",
+              "documentation": {
+                "content": [
+                  "Sepcify the number of prefixes AWS chooses from your VPC subnet’s IPv4 CIDR block and assigns it to your network interface. Mutually exclusive to `custom_prefixes`"
+                ],
+                "directives": [
+                  {
+                    "name": "since",
+                    "content": "1.0.0"
+                  }
+                ]
+              },
+              "dataType": "number",
+              "optional": true
+            },
+            {
+              "name": "custom_prefixes",
+              "documentation": {
+                "content": [
+                  "Specify the prefixes from your VPC subnet’s CIDR block to assign it to your network interface. Mutually exclusive to `auto_assign_count`"
+                ],
+                "directives": [
+                  {
+                    "name": "since",
+                    "content": "1.0.0"
+                  }
+                ]
+              },
+              "dataType": "list(string)",
+              "optional": true
+            }
+          ]
+        }
+      ]
     }
   ],
-  "ParentDataType": "map"
+  "parentDataType": ""
 }
 ```
 
