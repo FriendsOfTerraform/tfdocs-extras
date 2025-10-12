@@ -44,7 +44,7 @@ type ObjectGroup struct {
 }
 
 func extractObjectFromArg(arg *astDataType) []ObjectField {
-	if arg.Func != nil && arg.Func.Name == "object" && len(arg.Func.Args) > 0 {
+	if isObjectType(*arg) {
 		if arg.Func.Args[0].Object != nil {
 			return parseObjectBlock(*arg.Func.Args[0].Object)
 		}
@@ -68,6 +68,10 @@ func getObjectName(name string) string {
 	}
 
 	return "UnknownObject"
+}
+
+func isObjectType(data astDataType) bool {
+	return data.Func != nil && data.Func.Name == "object" && len(data.Func.Args) > 0
 }
 
 func isOptionalType(data astDataType) bool {
@@ -104,6 +108,16 @@ func newVariableMetadata(name string) VariableMetadata {
 	}
 }
 
+func handleObjectField(field *ObjectField, dataType astDataType) bool {
+	if isObjectType(dataType) && dataType.Func.Args[0].Object != nil {
+		parseNestedObject(field, dataType.Func.Args[0].Object)
+
+		return true
+	}
+
+	return false
+}
+
 func parseNestedObject(field *ObjectField, obj *astObject) {
 	nestedFields := parseObjectBlock(*obj)
 
@@ -115,14 +129,8 @@ func parseOptionalField(field *ObjectField, args []*astDataType) {
 	field.VariableMetadata.Optional = true
 
 	if len(args) >= 1 {
-		if args[0].Func != nil && args[0].Func.Name == "object" && len(args[0].Func.Args) > 0 {
-			if args[0].Func.Args[0].Object != nil {
-				nestedFields := parseObjectBlock(*args[0].Func.Args[0].Object)
-				field.VariableMetadata.DataTypeStr = "object(" + getObjectName(field.VariableMetadata.Name) + ")"
-				field.NestedDataType = nestedFields
-
-				return
-			}
+		if handleObjectField(field, *args[0]) {
+			return
 		}
 
 		if flattened := flattenSimpleTypes(*args[0]); flattened != nil {
@@ -165,11 +173,14 @@ func trimEmptyLines(lines []string) []string {
 func flattenSimpleTypes(data astDataType) *string {
 	if data.Primitive != nil {
 		return data.Primitive
-	} else if data.Number != nil {
+	}
+	if data.Number != nil {
 		return data.Number
-	} else if data.String != nil {
+	}
+	if data.String != nil {
 		return data.String
-	} else if data.Func != nil {
+	}
+	if data.Func != nil {
 		fxnName := data.Func.Name
 
 		// Build the function signature: "functionName(arg1, arg2, ...)"
@@ -228,10 +239,8 @@ func parseObjectBlock(obj astObject) []ObjectField {
 
 		if isOptionalType(*pair.Value) {
 			parseOptionalField(&field, pair.Value.Func.Args)
-		} else if pair.Value.Func != nil && pair.Value.Func.Name == "object" && len(pair.Value.Func.Args) > 0 {
-			if pair.Value.Func.Args[0].Object != nil {
-				parseNestedObject(&field, pair.Value.Func.Args[0].Object)
-			}
+		} else if handleObjectField(&field, *pair.Value) {
+			// Object function handled by helper
 		} else if flattened := flattenSimpleTypes(*pair.Value); flattened != nil {
 			field.VariableMetadata.DataTypeStr = *flattened
 		} else if pair.Value.Object != nil {
