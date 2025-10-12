@@ -9,55 +9,38 @@ import (
 
 // DocDirective represents a documentation directive like @since, @param, etc.
 type DocDirective struct {
-	Name    string
-	Content string
+	Name    string `json:"name"`
+	Content string `json:"content"`
 }
 
 // FieldDocBlock contains parsed documentation for a field
 type FieldDocBlock struct {
-	Content    []string
-	Directives []DocDirective
+	Content    []string       `json:"content"`
+	Directives []DocDirective `json:"directives"`
 }
 
 // VariableMetadata contains metadata about a variable or field
 type VariableMetadata struct {
-	Name          string
-	Documentation FieldDocBlock
-	DataTypeStr   string
-	Optional      bool
-	DefaultValue  *string
+	Name          string        `json:"name"`
+	Documentation FieldDocBlock `json:"documentation"`
+	DataTypeStr   string        `json:"dataType"`
+	Optional      bool          `json:"optional"`
+	DefaultValue  *string       `json:"defaultValue,omitempty"`
 }
 
 // ObjectField represents a field within an object structure
 type ObjectField struct {
-	VariableMetadata
+	VariableMetadata `json:",inline"`
 
-	NestedDataType *ObjectGroup
+	NestedDataType []ObjectField `json:"nestedDataType,omitempty"`
 }
 
 // ObjectGroup represents a group of related object fields with documentation
 type ObjectGroup struct {
-	VariableMetadata
+	VariableMetadata `json:",inline"`
 
-	Fields         []ObjectField
-	ParentDataType *string
-}
-
-// GetObjectName returns the CamelCase name for this object group
-func (o *ObjectGroup) GetObjectName() string {
-	if o.Name != "" {
-		// Convert to CamelCase
-		caser := cases.Title(language.English)
-		parts := strings.Split(o.Name, "_")
-
-		for i, part := range parts {
-			parts[i] = caser.String(part)
-		}
-
-		return strings.Join(parts, "")
-	}
-
-	return "UnknownObject"
+	Fields         []ObjectField `json:"fields"`
+	ParentDataType *string       `json:"parentDataType,omitempty"`
 }
 
 func extractObjectFromArg(arg *astDataType) []ObjectField {
@@ -70,6 +53,21 @@ func extractObjectFromArg(arg *astDataType) []ObjectField {
 	}
 
 	return nil
+}
+
+func getObjectName(name string) string {
+	if name != "" {
+		caser := cases.Title(language.English)
+		parts := strings.Split(name, "_")
+
+		for i, part := range parts {
+			parts[i] = caser.String(part)
+		}
+
+		return strings.Join(parts, "")
+	}
+
+	return "UnknownObject"
 }
 
 func isOptionalType(data astDataType) bool {
@@ -108,27 +106,25 @@ func newVariableMetadata(name string) VariableMetadata {
 
 func parseNestedObject(field *ObjectField, obj *astObject) {
 	nestedFields := parseObjectBlock(*obj)
-	nestedObjectGroup := &ObjectGroup{
-		VariableMetadata: VariableMetadata{
-			Name: field.VariableMetadata.Name,
-			Documentation: FieldDocBlock{
-				Content:    []string{},
-				Directives: []DocDirective{},
-			},
-			Optional:     false,
-			DefaultValue: nil,
-		},
-		Fields: nestedFields,
-	}
 
-	field.VariableMetadata.DataTypeStr = "object(" + nestedObjectGroup.GetObjectName() + ")"
-	field.NestedDataType = nestedObjectGroup
+	field.VariableMetadata.DataTypeStr = "object(" + getObjectName(field.VariableMetadata.Name) + ")"
+	field.NestedDataType = nestedFields
 }
 
 func parseOptionalField(field *ObjectField, args []*astDataType) {
 	field.VariableMetadata.Optional = true
 
 	if len(args) >= 1 {
+		if args[0].Func != nil && args[0].Func.Name == "object" && len(args[0].Func.Args) > 0 {
+			if args[0].Func.Args[0].Object != nil {
+				nestedFields := parseObjectBlock(*args[0].Func.Args[0].Object)
+				field.VariableMetadata.DataTypeStr = "object(" + getObjectName(field.VariableMetadata.Name) + ")"
+				field.NestedDataType = nestedFields
+
+				return
+			}
+		}
+
 		if flattened := flattenSimpleTypes(*args[0]); flattened != nil {
 			field.VariableMetadata.DataTypeStr = *flattened
 		}
@@ -232,6 +228,10 @@ func parseObjectBlock(obj astObject) []ObjectField {
 
 		if isOptionalType(*pair.Value) {
 			parseOptionalField(&field, pair.Value.Func.Args)
+		} else if pair.Value.Func != nil && pair.Value.Func.Name == "object" && len(pair.Value.Func.Args) > 0 {
+			if pair.Value.Func.Args[0].Object != nil {
+				parseNestedObject(&field, pair.Value.Func.Args[0].Object)
+			}
 		} else if flattened := flattenSimpleTypes(*pair.Value); flattened != nil {
 			field.VariableMetadata.DataTypeStr = *flattened
 		} else if pair.Value.Object != nil {
@@ -276,7 +276,7 @@ func parseObjectFunctionBlock(fxn astFunction, name string) *ObjectGroup {
 
 	if fields != nil {
 		objGroup.Fields = fields
-		objectTypeName := "object(" + objGroup.GetObjectName() + ")"
+		objectTypeName := "object(" + getObjectName(name) + ")"
 
 		if collectionPrefix != "" {
 			objGroup.VariableMetadata.DataTypeStr = collectionPrefix + "(" + objectTypeName + ")"

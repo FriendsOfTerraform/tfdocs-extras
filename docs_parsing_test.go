@@ -692,43 +692,32 @@ func TestParseObjectFunctionBlock_NestedObject(t *testing.T) {
 					Optional:     false,
 					DefaultValue: nil,
 				},
-				NestedDataType: &ObjectGroup{
-					VariableMetadata: VariableMetadata{
-						Name: "address",
-						Documentation: FieldDocBlock{
-							Content:    []string{},
-							Directives: []DocDirective{},
+				NestedDataType: []ObjectField{
+					{
+						VariableMetadata: VariableMetadata{
+							Documentation: FieldDocBlock{
+								Content:    []string{},
+								Directives: []DocDirective{},
+							},
+							Name:         "street",
+							DataTypeStr:  "string",
+							Optional:     false,
+							DefaultValue: nil,
 						},
-						Optional:     false,
-						DefaultValue: nil,
+						NestedDataType: nil,
 					},
-					Fields: []ObjectField{
-						{
-							VariableMetadata: VariableMetadata{
-								Documentation: FieldDocBlock{
-									Content:    []string{},
-									Directives: []DocDirective{},
-								},
-								Name:         "street",
-								DataTypeStr:  "string",
-								Optional:     false,
-								DefaultValue: nil,
+					{
+						VariableMetadata: VariableMetadata{
+							Documentation: FieldDocBlock{
+								Content:    []string{},
+								Directives: []DocDirective{},
 							},
-							NestedDataType: nil,
+							Name:         "city",
+							DataTypeStr:  "string",
+							Optional:     false,
+							DefaultValue: nil,
 						},
-						{
-							VariableMetadata: VariableMetadata{
-								Documentation: FieldDocBlock{
-									Content:    []string{},
-									Directives: []DocDirective{},
-								},
-								Name:         "city",
-								DataTypeStr:  "string",
-								Optional:     false,
-								DefaultValue: nil,
-							},
-							NestedDataType: nil,
-						},
+						NestedDataType: nil,
 					},
 				},
 			},
@@ -919,6 +908,299 @@ func TestParseListFunctionBlock_ListObject(t *testing.T) {
 					DefaultValue: strPtr("80"),
 				},
 				NestedDataType: nil,
+			},
+		},
+	}
+
+	if !reflect.DeepEqual(*objBlock, expected) {
+		t.Errorf("Expected object group %v, got %v", expected, *objBlock)
+	}
+}
+
+func TestParseObjectWithOptionalNestedObject(t *testing.T) {
+	obj := astFunction{
+		Name: "object",
+		Args: []*astDataType{
+			{
+				Object: &astObject{
+					Pairs: []*astObjectProperty{
+						{
+							Key: "ssh_keypair_name",
+							Value: &astDataType{
+								Primitive: strPtr("string"),
+							},
+						},
+						{
+							Key: "enable_managed_scaling",
+							Value: &astDataType{
+								Func: &astFunction{
+									Name: "optional",
+									Args: []*astDataType{
+										{
+											Func: &astFunction{
+												Name: "object",
+												Args: []*astDataType{
+													{
+														Object: &astObject{
+															Pairs: []*astObjectProperty{
+																{
+																	Key: "enable_managed_scaling_draining",
+																	Value: &astDataType{
+																		Primitive: strPtr("bool"),
+																	},
+																},
+																{
+																	Key: "enable_scale_in_protection",
+																	Value: &astDataType{
+																		Primitive: strPtr("bool"),
+																	},
+																},
+																{
+																	Key: "target_capacity_percentage",
+																	Value: &astDataType{
+																		Primitive: strPtr("number"),
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	objBlock := parseObjectFunctionBlock(obj, "root_object")
+
+	if objBlock == nil {
+		t.Fatal("Expected non-nil ObjectGroup")
+	}
+
+	expected := ObjectGroup{
+		VariableMetadata: VariableMetadata{
+			Name:        "root_object",
+			DataTypeStr: "object(RootObject)",
+			Documentation: FieldDocBlock{
+				Content:    []string{},
+				Directives: []DocDirective{},
+			},
+		},
+		ParentDataType: strPtr(""),
+		Fields: []ObjectField{
+			{
+				VariableMetadata: VariableMetadata{
+					Name: "ssh_keypair_name",
+					Documentation: FieldDocBlock{
+						Content:    []string{},
+						Directives: []DocDirective{},
+					},
+					DataTypeStr:  "string",
+					Optional:     false,
+					DefaultValue: nil,
+				},
+				NestedDataType: nil,
+			},
+			{
+				VariableMetadata: VariableMetadata{
+					Name: "enable_managed_scaling",
+					Documentation: FieldDocBlock{
+						Content:    []string{},
+						Directives: []DocDirective{},
+					},
+					DataTypeStr:  "object(EnableManagedScaling)",
+					Optional:     true,
+					DefaultValue: nil,
+				},
+				NestedDataType: []ObjectField{
+					{
+						VariableMetadata: VariableMetadata{
+							Name: "enable_managed_scaling_draining",
+							Documentation: FieldDocBlock{
+								Content:    []string{},
+								Directives: []DocDirective{},
+							},
+							DataTypeStr:  "bool",
+							Optional:     false,
+							DefaultValue: nil,
+						},
+						NestedDataType: nil,
+					},
+					{
+						VariableMetadata: VariableMetadata{
+							Name: "enable_scale_in_protection",
+							Documentation: FieldDocBlock{
+								Content:    []string{},
+								Directives: []DocDirective{},
+							},
+							DataTypeStr:  "bool",
+							Optional:     false,
+							DefaultValue: nil,
+						},
+						NestedDataType: nil,
+					},
+					{
+						VariableMetadata: VariableMetadata{
+							Name: "target_capacity_percentage",
+							Documentation: FieldDocBlock{
+								Content:    []string{},
+								Directives: []DocDirective{},
+							},
+							DataTypeStr:  "number",
+							Optional:     false,
+							DefaultValue: nil,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if !reflect.DeepEqual(*objBlock, expected) {
+		t.Errorf("Expected object group %v, got %v", expected, *objBlock)
+	}
+}
+
+func TestParseObjectWithRequiredNestedObject(t *testing.T) {
+	obj := astFunction{
+		Name: "object",
+		Args: []*astDataType{
+			{
+				Object: &astObject{
+					Pairs: []*astObjectProperty{
+						{
+							Key: "ssh_keypair_name",
+							Value: &astDataType{
+								Primitive: strPtr("string"),
+							},
+						},
+						{
+							Key: "enable_managed_scaling",
+							Value: &astDataType{
+								Func: &astFunction{
+									Name: "object",
+									Args: []*astDataType{
+										{
+											Object: &astObject{
+												Pairs: []*astObjectProperty{
+													{
+														Key: "enable_managed_scaling_draining",
+														Value: &astDataType{
+															Primitive: strPtr("bool"),
+														},
+													},
+													{
+														Key: "enable_scale_in_protection",
+														Value: &astDataType{
+															Primitive: strPtr("bool"),
+														},
+													},
+													{
+														Key: "target_capacity_percentage",
+														Value: &astDataType{
+															Primitive: strPtr("number"),
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	objBlock := parseObjectFunctionBlock(obj, "root_object")
+
+	if objBlock == nil {
+		t.Fatal("Expected non-nil ObjectGroup")
+	}
+
+	expected := ObjectGroup{
+		VariableMetadata: VariableMetadata{
+			Name:        "root_object",
+			DataTypeStr: "object(RootObject)",
+			Documentation: FieldDocBlock{
+				Content:    []string{},
+				Directives: []DocDirective{},
+			},
+		},
+		ParentDataType: strPtr(""),
+		Fields: []ObjectField{
+			{
+				VariableMetadata: VariableMetadata{
+					Name: "ssh_keypair_name",
+					Documentation: FieldDocBlock{
+						Content:    []string{},
+						Directives: []DocDirective{},
+					},
+					DataTypeStr:  "string",
+					Optional:     false,
+					DefaultValue: nil,
+				},
+				NestedDataType: nil,
+			},
+			{
+				VariableMetadata: VariableMetadata{
+					Name: "enable_managed_scaling",
+					Documentation: FieldDocBlock{
+						Content:    []string{},
+						Directives: []DocDirective{},
+					},
+					DataTypeStr:  "object(EnableManagedScaling)",
+					Optional:     false,
+					DefaultValue: nil,
+				},
+				NestedDataType: []ObjectField{
+					{
+						VariableMetadata: VariableMetadata{
+							Name: "enable_managed_scaling_draining",
+							Documentation: FieldDocBlock{
+								Content:    []string{},
+								Directives: []DocDirective{},
+							},
+							DataTypeStr:  "bool",
+							Optional:     false,
+							DefaultValue: nil,
+						},
+						NestedDataType: nil,
+					},
+					{
+						VariableMetadata: VariableMetadata{
+							Name: "enable_scale_in_protection",
+							Documentation: FieldDocBlock{
+								Content:    []string{},
+								Directives: []DocDirective{},
+							},
+							DataTypeStr:  "bool",
+							Optional:     false,
+							DefaultValue: nil,
+						},
+						NestedDataType: nil,
+					},
+					{
+						VariableMetadata: VariableMetadata{
+							Name: "target_capacity_percentage",
+							Documentation: FieldDocBlock{
+								Content:    []string{},
+								Directives: []DocDirective{},
+							},
+							DataTypeStr:  "number",
+							Optional:     false,
+							DefaultValue: nil,
+						},
+					},
+				},
 			},
 		},
 	}
