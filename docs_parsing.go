@@ -19,28 +19,22 @@ type FieldDocBlock struct {
 	Directives []DocDirective `json:"directives"`
 }
 
-// VariableMetadata contains metadata about a variable or field
-type VariableMetadata struct {
-	Name          string        `json:"name"`
-	Documentation FieldDocBlock `json:"documentation"`
-	DataTypeStr   string        `json:"dataType"`
-	Optional      bool          `json:"optional"`
-	DefaultValue  *string       `json:"defaultValue,omitempty"`
-}
-
 // ObjectField represents a field within an object structure
 type ObjectField struct {
-	VariableMetadata `json:",inline"`
-
-	NestedDataType []ObjectField `json:"nestedDataType,omitempty"`
+	Name           string        `json:"name"`
+	Documentation  FieldDocBlock `json:"documentation"`
+	DataTypeStr    string        `json:"dataType"`
+	Optional       bool          `json:"optional"`
+	DefaultValue   *string       `json:"defaultValue,omitempty"`
+	NestedDataType *string       `json:"nestedDataType,omitempty"`
+	Fields         []ObjectField `json:"fields,omitempty"`
 }
 
 // ObjectGroup represents a group of related object fields with documentation
 type ObjectGroup struct {
-	VariableMetadata `json:",inline"`
+	ObjectField `json:",inline"`
 
-	Fields         []ObjectField `json:"fields"`
-	ParentDataType *string       `json:"parentDataType,omitempty"`
+	ParentDataType *string `json:"parentDataType,omitempty"`
 }
 
 func extractObjectFromArg(arg *astDataType) []ObjectField {
@@ -98,8 +92,8 @@ func newEmptyFieldDocBlock() FieldDocBlock {
 	}
 }
 
-func newVariableMetadata(name string) VariableMetadata {
-	return VariableMetadata{
+func newObjectField(name string) ObjectField {
+	return ObjectField{
 		Name:          name,
 		Documentation: newEmptyFieldDocBlock(),
 		Optional:      false,
@@ -119,14 +113,16 @@ func handleObjectField(field *ObjectField, dataType astDataType) bool {
 }
 
 func parseNestedObject(field *ObjectField, obj *astObject) {
+	objectName := getObjectName(field.Name)
 	nestedFields := parseObjectBlock(*obj)
 
-	field.VariableMetadata.DataTypeStr = "object(" + getObjectName(field.VariableMetadata.Name) + ")"
-	field.NestedDataType = nestedFields
+	field.DataTypeStr = "object(" + objectName + ")"
+	field.NestedDataType = &objectName
+	field.Fields = nestedFields
 }
 
 func parseOptionalField(field *ObjectField, args []*astDataType) {
-	field.VariableMetadata.Optional = true
+	field.Optional = true
 
 	if len(args) >= 1 {
 		if handleObjectField(field, *args[0]) {
@@ -134,12 +130,12 @@ func parseOptionalField(field *ObjectField, args []*astDataType) {
 		}
 
 		if flattened := flattenSimpleTypes(*args[0]); flattened != nil {
-			field.VariableMetadata.DataTypeStr = *flattened
+			field.DataTypeStr = *flattened
 		}
 
 		if len(args) >= 2 {
 			if defaultFlattened := flattenSimpleTypes(*args[1]); defaultFlattened != nil {
-				field.VariableMetadata.DefaultValue = defaultFlattened
+				field.DefaultValue = defaultFlattened
 			}
 		}
 	}
@@ -229,12 +225,10 @@ func parseObjectBlock(obj astObject) []ObjectField {
 	var fields []ObjectField
 
 	for _, pair := range obj.Pairs {
-		field := ObjectField{
-			VariableMetadata: newVariableMetadata(pair.Key),
-		}
+		field := newObjectField(pair.Key)
 
 		if pair.Doc != nil {
-			field.VariableMetadata.Documentation = parseDocBlock(*pair.Doc)
+			field.Documentation = parseDocBlock(*pair.Doc)
 		}
 
 		if isOptionalType(*pair.Value) {
@@ -242,7 +236,7 @@ func parseObjectBlock(obj astObject) []ObjectField {
 		} else if handleObjectField(&field, *pair.Value) {
 			// Object function handled by helper
 		} else if flattened := flattenSimpleTypes(*pair.Value); flattened != nil {
-			field.VariableMetadata.DataTypeStr = *flattened
+			field.DataTypeStr = *flattened
 		} else if pair.Value.Object != nil {
 			parseNestedObject(&field, pair.Value.Object)
 		}
@@ -268,15 +262,15 @@ func parseObjectFunctionBlock(fxn astFunction, name string) *ObjectGroup {
 	}
 
 	objGroup := &ObjectGroup{
-		VariableMetadata: newVariableMetadata(name),
-		ParentDataType:   &collectionPrefix,
+		ObjectField:    newObjectField(name),
+		ParentDataType: &collectionPrefix,
 	}
 
 	var fields []ObjectField
 
 	// Handle optional(object({...}))
 	if fxn.Name == "optional" && len(fxn.Args) > 0 {
-		objGroup.VariableMetadata.Optional = true
+		objGroup.Optional = true
 	}
 
 	if len(fxn.Args) > 0 {
@@ -285,12 +279,15 @@ func parseObjectFunctionBlock(fxn astFunction, name string) *ObjectGroup {
 
 	if fields != nil {
 		objGroup.Fields = fields
-		objectTypeName := "object(" + getObjectName(name) + ")"
+		objectName := getObjectName(name)
+		objectTypeName := "object(" + objectName + ")"
+
+		objGroup.NestedDataType = &objectName
 
 		if collectionPrefix != "" {
-			objGroup.VariableMetadata.DataTypeStr = collectionPrefix + "(" + objectTypeName + ")"
+			objGroup.DataTypeStr = collectionPrefix + "(" + objectTypeName + ")"
 		} else {
-			objGroup.VariableMetadata.DataTypeStr = objectTypeName
+			objGroup.DataTypeStr = objectTypeName
 		}
 	}
 

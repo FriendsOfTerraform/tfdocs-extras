@@ -503,32 +503,28 @@ func TestParseObjectBlock_AstObject(t *testing.T) {
 
 	expected := []ObjectField{
 		{
-			VariableMetadata: VariableMetadata{
-				Name: "enable_managed_scaling_draining",
-				Documentation: FieldDocBlock{
-					Content: []string{"The name of the user"},
-					Directives: []DocDirective{
-						{Name: "since", Content: "1.0.0"},
-					},
+			Name: "enable_managed_scaling_draining",
+			Documentation: FieldDocBlock{
+				Content: []string{"The name of the user"},
+				Directives: []DocDirective{
+					{Name: "since", Content: "1.0.0"},
 				},
-				DataTypeStr:  "bool",
-				Optional:     true,
-				DefaultValue: strPtr("true"),
 			},
+			DataTypeStr:  "bool",
+			Optional:     true,
+			DefaultValue: strPtr("true"),
 		},
 		{
-			VariableMetadata: VariableMetadata{
-				Name: "enable_scale_in_protection",
-				Documentation: FieldDocBlock{
-					Content: []string{"The age of the user"},
-					Directives: []DocDirective{
-						{Name: "since", Content: "1.0.0"},
-					},
+			Name: "enable_scale_in_protection",
+			Documentation: FieldDocBlock{
+				Content: []string{"The age of the user"},
+				Directives: []DocDirective{
+					{Name: "since", Content: "1.0.0"},
 				},
-				DataTypeStr:  "number",
-				Optional:     false,
-				DefaultValue: nil,
 			},
+			DataTypeStr:  "number",
+			Optional:     false,
+			DefaultValue: nil,
 		},
 	}
 
@@ -566,19 +562,18 @@ func TestParseObjectFunctionBlock_OptionalObject(t *testing.T) {
 	objBlock := parseObjectFunctionBlock(obj, "test_object")
 
 	expected := ObjectGroup{
-		VariableMetadata: VariableMetadata{
+		ObjectField: ObjectField{
 			Name: "test_object",
 			Documentation: FieldDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
-			Optional:     true,
-			DefaultValue: nil,
-			DataTypeStr:  "object(TestObject)",
-		},
-		Fields: []ObjectField{
-			{
-				VariableMetadata: VariableMetadata{
+			Optional:       true,
+			DefaultValue:   nil,
+			DataTypeStr:    "object(TestObject)",
+			NestedDataType: strPtr("TestObject"),
+			Fields: []ObjectField{
+				{
 					Documentation: FieldDocBlock{
 						Content:    []string{},
 						Directives: []DocDirective{},
@@ -587,8 +582,8 @@ func TestParseObjectFunctionBlock_OptionalObject(t *testing.T) {
 					DataTypeStr:  "string",
 					Optional:     false,
 					DefaultValue: nil,
+					Fields:       nil,
 				},
-				NestedDataType: nil,
 			},
 		},
 		ParentDataType: strPtr(""),
@@ -657,19 +652,17 @@ func TestParseObjectFunctionBlock_NestedObject(t *testing.T) {
 	}
 
 	expected := ObjectGroup{
-		VariableMetadata: VariableMetadata{
-			Name:        "user_profile",
-			DataTypeStr: "object(UserProfile)",
+		ObjectField: ObjectField{
+			Name:           "user_profile",
+			DataTypeStr:    "object(UserProfile)",
+			NestedDataType: strPtr("UserProfile"),
 			Documentation: FieldDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
 			Optional: true,
-		},
-		ParentDataType: strPtr(""),
-		Fields: []ObjectField{
-			{
-				VariableMetadata: VariableMetadata{
+			Fields: []ObjectField{
+				{
 					Documentation: FieldDocBlock{
 						Content:    []string{},
 						Directives: []DocDirective{},
@@ -678,23 +671,20 @@ func TestParseObjectFunctionBlock_NestedObject(t *testing.T) {
 					DataTypeStr:  "string",
 					Optional:     false,
 					DefaultValue: nil,
+					Fields:       nil,
 				},
-				NestedDataType: nil,
-			},
-			{
-				VariableMetadata: VariableMetadata{
+				{
 					Documentation: FieldDocBlock{
 						Content:    []string{},
 						Directives: []DocDirective{},
 					},
-					Name:         "address",
-					DataTypeStr:  "object(Address)",
-					Optional:     false,
-					DefaultValue: nil,
-				},
-				NestedDataType: []ObjectField{
-					{
-						VariableMetadata: VariableMetadata{
+					Name:           "address",
+					DataTypeStr:    "object(Address)",
+					NestedDataType: strPtr("Address"),
+					Optional:       false,
+					DefaultValue:   nil,
+					Fields: []ObjectField{
+						{
 							Documentation: FieldDocBlock{
 								Content:    []string{},
 								Directives: []DocDirective{},
@@ -703,11 +693,9 @@ func TestParseObjectFunctionBlock_NestedObject(t *testing.T) {
 							DataTypeStr:  "string",
 							Optional:     false,
 							DefaultValue: nil,
+							Fields:       nil,
 						},
-						NestedDataType: nil,
-					},
-					{
-						VariableMetadata: VariableMetadata{
+						{
 							Documentation: FieldDocBlock{
 								Content:    []string{},
 								Directives: []DocDirective{},
@@ -716,12 +704,13 @@ func TestParseObjectFunctionBlock_NestedObject(t *testing.T) {
 							DataTypeStr:  "string",
 							Optional:     false,
 							DefaultValue: nil,
+							Fields:       nil,
 						},
-						NestedDataType: nil,
 					},
 				},
 			},
 		},
+		ParentDataType: strPtr(""),
 	}
 
 	if !reflect.DeepEqual(*objBlock, expected) {
@@ -769,18 +758,16 @@ func TestParseMapFunctionBlock_MapObject(t *testing.T) {
 	}
 
 	expected := ObjectGroup{
-		VariableMetadata: VariableMetadata{
-			Name:        "instance_config",
-			DataTypeStr: "map(object(InstanceConfig))",
+		ObjectField: ObjectField{
+			Name:           "instance_config",
+			DataTypeStr:    "map(object(InstanceConfig))",
+			NestedDataType: strPtr("InstanceConfig"),
 			Documentation: FieldDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
-		},
-		ParentDataType: strPtr("map"),
-		Fields: []ObjectField{
-			{
-				VariableMetadata: VariableMetadata{
+			Fields: []ObjectField{
+				{
 					Name: "desired_instances",
 					Documentation: FieldDocBlock{
 						Content: []string{
@@ -793,10 +780,11 @@ func TestParseMapFunctionBlock_MapObject(t *testing.T) {
 					DataTypeStr:  "number",
 					Optional:     false,
 					DefaultValue: nil,
+					Fields:       nil,
 				},
-				NestedDataType: nil,
 			},
 		},
+		ParentDataType: strPtr("map"),
 	}
 
 	if !reflect.DeepEqual(*objBlock, expected) {
@@ -865,18 +853,16 @@ func TestParseListFunctionBlock_ListObject(t *testing.T) {
 	}
 
 	expected := ObjectGroup{
-		VariableMetadata: VariableMetadata{
-			Name:        "server_config",
-			DataTypeStr: "list(object(ServerConfig))",
+		ObjectField: ObjectField{
+			Name:           "server_config",
+			DataTypeStr:    "list(object(ServerConfig))",
+			NestedDataType: strPtr("ServerConfig"),
 			Documentation: FieldDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
-		},
-		ParentDataType: strPtr("list"),
-		Fields: []ObjectField{
-			{
-				VariableMetadata: VariableMetadata{
+			Fields: []ObjectField{
+				{
 					Name: "server_name",
 					Documentation: FieldDocBlock{
 						Content: []string{
@@ -889,11 +875,9 @@ func TestParseListFunctionBlock_ListObject(t *testing.T) {
 					DataTypeStr:  "string",
 					Optional:     false,
 					DefaultValue: nil,
+					Fields:       nil,
 				},
-				NestedDataType: nil,
-			},
-			{
-				VariableMetadata: VariableMetadata{
+				{
 					Name: "port",
 					Documentation: FieldDocBlock{
 						Content: []string{
@@ -906,10 +890,11 @@ func TestParseListFunctionBlock_ListObject(t *testing.T) {
 					DataTypeStr:  "number",
 					Optional:     true,
 					DefaultValue: strPtr("80"),
+					Fields:       nil,
 				},
-				NestedDataType: nil,
 			},
 		},
+		ParentDataType: strPtr("list"),
 	}
 
 	if !reflect.DeepEqual(*objBlock, expected) {
@@ -984,18 +969,16 @@ func TestParseObjectWithOptionalNestedObject(t *testing.T) {
 	}
 
 	expected := ObjectGroup{
-		VariableMetadata: VariableMetadata{
-			Name:        "root_object",
-			DataTypeStr: "object(RootObject)",
+		ObjectField: ObjectField{
+			Name:           "root_object",
+			DataTypeStr:    "object(RootObject)",
+			NestedDataType: strPtr("RootObject"),
 			Documentation: FieldDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
-		},
-		ParentDataType: strPtr(""),
-		Fields: []ObjectField{
-			{
-				VariableMetadata: VariableMetadata{
+			Fields: []ObjectField{
+				{
 					Name: "ssh_keypair_name",
 					Documentation: FieldDocBlock{
 						Content:    []string{},
@@ -1004,23 +987,20 @@ func TestParseObjectWithOptionalNestedObject(t *testing.T) {
 					DataTypeStr:  "string",
 					Optional:     false,
 					DefaultValue: nil,
+					Fields:       nil,
 				},
-				NestedDataType: nil,
-			},
-			{
-				VariableMetadata: VariableMetadata{
+				{
 					Name: "enable_managed_scaling",
 					Documentation: FieldDocBlock{
 						Content:    []string{},
 						Directives: []DocDirective{},
 					},
-					DataTypeStr:  "object(EnableManagedScaling)",
-					Optional:     true,
-					DefaultValue: nil,
-				},
-				NestedDataType: []ObjectField{
-					{
-						VariableMetadata: VariableMetadata{
+					DataTypeStr:    "object(EnableManagedScaling)",
+					NestedDataType: strPtr("EnableManagedScaling"),
+					Optional:       true,
+					DefaultValue:   nil,
+					Fields: []ObjectField{
+						{
 							Name: "enable_managed_scaling_draining",
 							Documentation: FieldDocBlock{
 								Content:    []string{},
@@ -1029,11 +1009,9 @@ func TestParseObjectWithOptionalNestedObject(t *testing.T) {
 							DataTypeStr:  "bool",
 							Optional:     false,
 							DefaultValue: nil,
+							Fields:       nil,
 						},
-						NestedDataType: nil,
-					},
-					{
-						VariableMetadata: VariableMetadata{
+						{
 							Name: "enable_scale_in_protection",
 							Documentation: FieldDocBlock{
 								Content:    []string{},
@@ -1042,11 +1020,9 @@ func TestParseObjectWithOptionalNestedObject(t *testing.T) {
 							DataTypeStr:  "bool",
 							Optional:     false,
 							DefaultValue: nil,
+							Fields:       nil,
 						},
-						NestedDataType: nil,
-					},
-					{
-						VariableMetadata: VariableMetadata{
+						{
 							Name: "target_capacity_percentage",
 							Documentation: FieldDocBlock{
 								Content:    []string{},
@@ -1060,6 +1036,7 @@ func TestParseObjectWithOptionalNestedObject(t *testing.T) {
 				},
 			},
 		},
+		ParentDataType: strPtr(""),
 	}
 
 	if !reflect.DeepEqual(*objBlock, expected) {
@@ -1127,18 +1104,16 @@ func TestParseObjectWithRequiredNestedObject(t *testing.T) {
 	}
 
 	expected := ObjectGroup{
-		VariableMetadata: VariableMetadata{
-			Name:        "root_object",
-			DataTypeStr: "object(RootObject)",
+		ObjectField: ObjectField{
+			Name:           "root_object",
+			DataTypeStr:    "object(RootObject)",
+			NestedDataType: strPtr("RootObject"),
 			Documentation: FieldDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
-		},
-		ParentDataType: strPtr(""),
-		Fields: []ObjectField{
-			{
-				VariableMetadata: VariableMetadata{
+			Fields: []ObjectField{
+				{
 					Name: "ssh_keypair_name",
 					Documentation: FieldDocBlock{
 						Content:    []string{},
@@ -1147,23 +1122,20 @@ func TestParseObjectWithRequiredNestedObject(t *testing.T) {
 					DataTypeStr:  "string",
 					Optional:     false,
 					DefaultValue: nil,
+					Fields:       nil,
 				},
-				NestedDataType: nil,
-			},
-			{
-				VariableMetadata: VariableMetadata{
+				{
 					Name: "enable_managed_scaling",
 					Documentation: FieldDocBlock{
 						Content:    []string{},
 						Directives: []DocDirective{},
 					},
-					DataTypeStr:  "object(EnableManagedScaling)",
-					Optional:     false,
-					DefaultValue: nil,
-				},
-				NestedDataType: []ObjectField{
-					{
-						VariableMetadata: VariableMetadata{
+					DataTypeStr:    "object(EnableManagedScaling)",
+					NestedDataType: strPtr("EnableManagedScaling"),
+					Optional:       false,
+					DefaultValue:   nil,
+					Fields: []ObjectField{
+						{
 							Name: "enable_managed_scaling_draining",
 							Documentation: FieldDocBlock{
 								Content:    []string{},
@@ -1172,11 +1144,9 @@ func TestParseObjectWithRequiredNestedObject(t *testing.T) {
 							DataTypeStr:  "bool",
 							Optional:     false,
 							DefaultValue: nil,
+							Fields:       nil,
 						},
-						NestedDataType: nil,
-					},
-					{
-						VariableMetadata: VariableMetadata{
+						{
 							Name: "enable_scale_in_protection",
 							Documentation: FieldDocBlock{
 								Content:    []string{},
@@ -1185,11 +1155,9 @@ func TestParseObjectWithRequiredNestedObject(t *testing.T) {
 							DataTypeStr:  "bool",
 							Optional:     false,
 							DefaultValue: nil,
+							Fields:       nil,
 						},
-						NestedDataType: nil,
-					},
-					{
-						VariableMetadata: VariableMetadata{
+						{
 							Name: "target_capacity_percentage",
 							Documentation: FieldDocBlock{
 								Content:    []string{},
@@ -1203,6 +1171,7 @@ func TestParseObjectWithRequiredNestedObject(t *testing.T) {
 				},
 			},
 		},
+		ParentDataType: strPtr(""),
 	}
 
 	if !reflect.DeepEqual(*objBlock, expected) {
