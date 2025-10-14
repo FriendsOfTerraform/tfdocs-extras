@@ -87,13 +87,14 @@ func parseAst(str string) (*astRoot, error) {
 		participle.Lexer(lexer.MustSimple([]lexer.SimpleRule{
 			{"DocBlock", `/\*\*([^*]|\*+[^*/])*\*+/`},
 			{"DocLine", `///[^\n]*`},
+			{"Comment", `#[^\n]*`},
 			{"String", `"([^"\\]|\\.)*"`},
 			{"Number", `-?\d+(\.\d+)?`},
 			{"Ident", `[a-zA-Z_][a-zA-Z0-9_]*`},
 			{"Punct", `[\(\)\{\}=,]`},
 			{"Whitespace", `[ \t\r\n]+`},
 		})),
-		participle.Elide("Whitespace"),
+		participle.Elide("Whitespace", "Comment"),
 	)
 	if err != nil {
 		return nil, err

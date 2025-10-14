@@ -381,3 +381,196 @@ func TestDocBlockString_Capture_EmptyInput(t *testing.T) {
 		t.Errorf("Expected empty string, got '%s'", string(docBlock))
 	}
 }
+
+func TestParse_WithHashComments(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{
+			name:  "Simple hash comment",
+			input: "# This is a comment\nstring",
+		},
+		{
+			name:  "Hash comment at end",
+			input: "string # inline comment",
+		},
+		{
+			name:  "Multiple hash comments",
+			input: "# Comment 1\n# Comment 2\nstring",
+		},
+		{
+			name: "Hash comment in object",
+			input: `{
+				# This is a comment about name
+				name = string
+				# This is a comment about age
+				age = number
+			}`,
+		},
+		{
+			name: "Hash comment between properties",
+			input: `{
+				name = string
+				# Separator comment
+				age = number
+			}`,
+		},
+		{
+			name: "Hash comment in function",
+			input: `map(
+				# Comment inside function args
+				string
+			)`,
+		},
+		{
+			name: "Mixed doc and hash comments",
+			input: `{
+				/// Documentation comment
+				# Regular comment
+				name = string
+			}`,
+		},
+		{
+			name: "Hash comment at start of object",
+			input: `{
+				# Header comment
+				name = string
+			}`,
+		},
+		{
+			name: "Hash comment at end of object",
+			input: `{
+				name = string
+				# Footer comment
+			}`,
+		},
+		{
+			name: "Multiple hash comments in complex object",
+			input: `{
+				# User information
+				name = string
+				age = number
+				# Contact details
+				email = string
+				# Address fields
+				address = {
+					# Street address
+					street = string
+					city = string
+				}
+			}`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result, err := parseAst(test.input)
+			if err != nil {
+				t.Fatalf("parseAst failed for input with hash comments: %v\nInput:\n%s", err, test.input)
+			}
+
+			if result == nil || result.Expr == nil {
+				t.Fatal("Expected valid parse result")
+			}
+		})
+	}
+}
+
+func TestParse_HashCommentsDoNotAffectParsing(t *testing.T) {
+	// Parse without comments
+	inputWithoutComments := `{
+		name = string
+		age = number
+	}`
+
+	resultWithout, err := parseAst(inputWithoutComments)
+	if err != nil {
+		t.Fatalf("parseAst failed without comments: %v", err)
+	}
+
+	// Parse with comments
+	inputWithComments := `{
+		# This is the name field
+		name = string
+		# This is the age field
+		age = number
+		# End of object
+	}`
+
+	resultWith, err := parseAst(inputWithComments)
+	if err != nil {
+		t.Fatalf("parseAst failed with comments: %v", err)
+	}
+
+	// Both should produce the same structure
+	if resultWithout.Expr.Object == nil || resultWith.Expr.Object == nil {
+		t.Fatal("Expected object in both results")
+	}
+
+	if len(resultWithout.Expr.Object.Pairs) != len(resultWith.Expr.Object.Pairs) {
+		t.Errorf("Expected same number of pairs, got %d without comments and %d with comments",
+			len(resultWithout.Expr.Object.Pairs), len(resultWith.Expr.Object.Pairs))
+	}
+
+	// Verify the properties are the same
+	for i := 0; i < len(resultWithout.Expr.Object.Pairs); i++ {
+		keyWithout := resultWithout.Expr.Object.Pairs[i].Key
+		keyWith := resultWith.Expr.Object.Pairs[i].Key
+
+		if keyWithout != keyWith {
+			t.Errorf("Expected same key at position %d, got '%s' without comments and '%s' with comments",
+				i, keyWithout, keyWith)
+		}
+	}
+}
+
+func TestParse_HashCommentsInNestedStructures(t *testing.T) {
+	input := `map(object({
+		# Primary key
+		id = string
+		# Nested object for user details
+		user = object({
+			# User's full name
+			name = string
+			# User's age
+			age = number
+		})
+		# Optional description
+		description = optional(string)
+	}))`
+
+	result, err := parseAst(input)
+	if err != nil {
+		t.Fatalf("parseAst failed for nested structure with hash comments: %v", err)
+	}
+
+	// Verify the outer function
+	if result.Expr.Func == nil || result.Expr.Func.Name != "map" {
+		t.Fatal("Expected outer function 'map'")
+	}
+
+	// Verify the inner object function
+	innerFunc := result.Expr.Func.Args[0].Func
+	if innerFunc == nil || innerFunc.Name != "object" {
+		t.Fatal("Expected inner function 'object'")
+	}
+
+	// Verify the object has the expected properties
+	obj := innerFunc.Args[0].Object
+	if obj == nil {
+		t.Fatal("Expected object argument")
+	}
+
+	if len(obj.Pairs) != 3 {
+		t.Errorf("Expected 3 properties, got %d", len(obj.Pairs))
+	}
+
+	// Verify property names
+	expectedKeys := []string{"id", "user", "description"}
+	for i, expectedKey := range expectedKeys {
+		if obj.Pairs[i].Key != expectedKey {
+			t.Errorf("Expected key '%s' at position %d, got '%s'", expectedKey, i, obj.Pairs[i].Key)
+		}
+	}
+}
