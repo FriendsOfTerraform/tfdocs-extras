@@ -1,0 +1,50 @@
+{{define "table" -}}
+    <table>
+        <thead>
+            <tr><th>Type</th><th>Name</th><th>Default Value</th></tr>
+        </thead>
+        <tbody>
+            {{range .Rows -}}
+                {{template "table_row" .}}
+            {{- end}}
+        </tbody>
+    </table>
+{{- end}}
+
+{{define "table_row"}}
+<tr>
+    <td><code>{{.Type}}</code></td>
+    <td>{{.Name}}</td>
+    <td><code>{{.DefaultValue}}</code></td>
+</tr>
+<tr>
+<td colspan="3">
+
+{{.Description}}
+
+{{range .Attributes}}
+
+**{{.Name}}:** {{.Content}}
+
+{{end}}
+
+</tr>
+{{end}}
+
+## Required
+
+{{template "table" .RequiredInputs}}
+
+## Optional
+
+{{template "table" .OptionalInputs}}
+
+## Objects
+
+{{range $key, $input := .NestedInputs}}
+
+### {{$key}}
+
+{{template "table" $input}}
+
+{{end}}
