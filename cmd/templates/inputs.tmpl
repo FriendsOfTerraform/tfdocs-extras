@@ -1,21 +1,19 @@
 {{define "table" -}}
-    <table>
-        <thead>
-            <tr><th>Type</th><th>Name</th><th>Default Value</th></tr>
-        </thead>
-        <tbody>
-            {{range .Rows -}}
-                {{template "table_row" .}}
-            {{- end}}
-        </tbody>
-    </table>
+<table>
+<thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>Default&nbsp;Value</th></tr></thead>
+<tbody>
+{{range .Rows -}}
+    {{template "table_row" .}}
+{{- end}}
+</tbody>
+</table>
 {{- end}}
 
 {{define "table_row"}}
 <tr>
     <td><code>{{.Type}}</code></td>
-    <td>{{.Name}}</td>
-    <td><code>{{.DefaultValue}}</code></td>
+    <td width="100%">{{.Name}}</td>
+    <td>{{if .DefaultValue}}<code>{{.DefaultValue}}</code>{{end}}</td>
 </tr>
 <tr>
 <td colspan="3">
