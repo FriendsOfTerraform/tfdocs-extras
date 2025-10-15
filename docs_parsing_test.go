@@ -1178,3 +1178,178 @@ func TestParseObjectWithRequiredNestedObject(t *testing.T) {
 		t.Errorf("Expected object group %v, got %v", expected, *objBlock)
 	}
 }
+
+func TestParseComplexNestedHealthCheckObject(t *testing.T) {
+	obj, err := parseAst(`list(object({
+	  name            = string
+	  health_check = optional(object({
+		enabled                    = optional(bool, true)
+		invert_health_check_status = optional(bool, false)
+	
+		calculated_check = optional(object({
+		  health_checks_to_monitor = list(string)
+		  healthy_threshold        = optional(number, null)
+		}), null)
+	
+		cloudwatch_alarm_check = optional(object({
+		  alarm_name   = string
+		  alarm_region = optional(string, null)
+		}), null)
+	
+		cloudwatch_alarms = optional(map(object({
+		  metric_name = string # HealthCheckPercentageHealthy, HealthCheckStatus, ChildHealthCheckHealthyCount
+		  expression  = string # statistic comparison_operator threshold
+		})), {})
+	
+		endpoint_check = optional(object({
+		  url                   = string
+		  enable_latency_graphs = optional(bool, false)
+		}), null)
+	  }), null)
+	}))`)
+
+	if err != nil {
+		t.Fatalf("Failed to parse AST: %v", err)
+	}
+
+	if obj.Expr == nil || obj.Expr.Func == nil {
+		t.Fatal("Expected non-nil function expression")
+	}
+
+	objBlock := parseObjectFunctionBlock(*obj.Expr.Func, "health_check_config")
+
+	if objBlock == nil {
+		t.Fatal("Expected non-nil ObjectGroup")
+	}
+
+	// Verify the top-level structure
+	if objBlock.ObjectField.Name != "health_check_config" {
+		t.Errorf("Expected name 'health_check_config', got '%s'", objBlock.ObjectField.Name)
+	}
+
+	if objBlock.ObjectField.DataTypeStr != "list(object(HealthCheckConfig))" {
+		t.Errorf("Expected DataTypeStr 'list(object(HealthCheckConfig))', got '%s'", objBlock.ObjectField.DataTypeStr)
+	}
+
+	if objBlock.ParentDataType == nil || *objBlock.ParentDataType != "list" {
+		t.Errorf("Expected ParentDataType 'list', got %v", objBlock.ParentDataType)
+	}
+
+	// Verify top-level fields: name and health_check
+	if len(objBlock.ObjectField.Fields) != 2 {
+		t.Fatalf("Expected 2 top-level fields, got %d", len(objBlock.ObjectField.Fields))
+	}
+
+	// Verify 'name' field
+	nameField := objBlock.ObjectField.Fields[0]
+	if nameField.Name != "name" {
+		t.Errorf("Expected first field 'name', got '%s'", nameField.Name)
+	}
+	if nameField.DataTypeStr != "string" {
+		t.Errorf("Expected name DataTypeStr 'string', got '%s'", nameField.DataTypeStr)
+	}
+	if nameField.Optional {
+		t.Error("Expected name to not be optional")
+	}
+
+	// Verify 'health_check' field
+	healthCheckField := objBlock.ObjectField.Fields[1]
+	if healthCheckField.Name != "health_check" {
+		t.Errorf("Expected second field 'health_check', got '%s'", healthCheckField.Name)
+	}
+	if !healthCheckField.Optional {
+		t.Error("Expected health_check to be optional")
+	}
+	if healthCheckField.DefaultValue == nil || *healthCheckField.DefaultValue != "null" {
+		t.Errorf("Expected health_check default value 'null', got %v", healthCheckField.DefaultValue)
+	}
+
+	// Verify health_check has 6 nested fields
+	if len(healthCheckField.Fields) != 6 {
+		t.Fatalf("Expected 6 health_check fields, got %d", len(healthCheckField.Fields))
+	}
+
+	expectedHealthCheckFields := []string{
+		"enabled",
+		"invert_health_check_status",
+		"calculated_check",
+		"cloudwatch_alarm_check",
+		"cloudwatch_alarms",
+		"endpoint_check",
+	}
+
+	for i, expectedName := range expectedHealthCheckFields {
+		if healthCheckField.Fields[i].Name != expectedName {
+			t.Errorf("Expected health_check field %d to be '%s', got '%s'", i, expectedName, healthCheckField.Fields[i].Name)
+		}
+	}
+
+	// Verify 'enabled' field
+	enabledField := healthCheckField.Fields[0]
+	if !enabledField.Optional {
+		t.Error("Expected enabled to be optional")
+	}
+	if enabledField.DataTypeStr != "bool" {
+		t.Errorf("Expected enabled DataTypeStr 'bool', got '%s'", enabledField.DataTypeStr)
+	}
+	if enabledField.DefaultValue == nil || *enabledField.DefaultValue != "true" {
+		t.Errorf("Expected enabled default value 'true', got %v", enabledField.DefaultValue)
+	}
+
+	// Verify 'calculated_check' nested object
+	calculatedCheckField := healthCheckField.Fields[2]
+	if !calculatedCheckField.Optional {
+		t.Error("Expected calculated_check to be optional")
+	}
+	if len(calculatedCheckField.Fields) != 2 {
+		t.Fatalf("Expected 2 calculated_check fields, got %d", len(calculatedCheckField.Fields))
+	}
+
+	// Verify 'health_checks_to_monitor' is a list
+	healthChecksToMonitorField := calculatedCheckField.Fields[0]
+	if healthChecksToMonitorField.Name != "health_checks_to_monitor" {
+		t.Errorf("Expected 'health_checks_to_monitor', got '%s'", healthChecksToMonitorField.Name)
+	}
+	if healthChecksToMonitorField.DataTypeStr != "list(string)" {
+		t.Errorf("Expected DataTypeStr 'list(string)', got '%s'", healthChecksToMonitorField.DataTypeStr)
+	}
+
+	// Verify 'cloudwatch_alarms' is a map of objects
+	cloudwatchAlarmsField := healthCheckField.Fields[4]
+	if !cloudwatchAlarmsField.Optional {
+		t.Error("Expected cloudwatch_alarms to be optional")
+	}
+	if cloudwatchAlarmsField.DataTypeStr != "map(object(CloudwatchAlarms))" {
+		t.Errorf("Expected DataTypeStr 'map(object(CloudwatchAlarms))', got '%s'", cloudwatchAlarmsField.DataTypeStr)
+	}
+	if len(cloudwatchAlarmsField.Fields) != 2 {
+		t.Fatalf("Expected 2 cloudwatch_alarms fields, got %d", len(cloudwatchAlarmsField.Fields))
+	}
+	if cloudwatchAlarmsField.Fields[0].Name != "metric_name" {
+		t.Errorf("Expected 'metric_name', got '%s'", cloudwatchAlarmsField.Fields[0].Name)
+	}
+	if cloudwatchAlarmsField.Fields[1].Name != "expression" {
+		t.Errorf("Expected 'expression', got '%s'", cloudwatchAlarmsField.Fields[1].Name)
+	}
+
+	// Verify 'endpoint_check' nested object
+	endpointCheckField := healthCheckField.Fields[5]
+	if !endpointCheckField.Optional {
+		t.Error("Expected endpoint_check to be optional")
+	}
+	if len(endpointCheckField.Fields) != 2 {
+		t.Fatalf("Expected 2 endpoint_check fields, got %d", len(endpointCheckField.Fields))
+	}
+	if endpointCheckField.Fields[0].Name != "url" {
+		t.Errorf("Expected 'url', got '%s'", endpointCheckField.Fields[0].Name)
+	}
+	if endpointCheckField.Fields[1].Name != "enable_latency_graphs" {
+		t.Errorf("Expected 'enable_latency_graphs', got '%s'", endpointCheckField.Fields[1].Name)
+	}
+	if !endpointCheckField.Fields[1].Optional {
+		t.Error("Expected enable_latency_graphs to be optional")
+	}
+	if endpointCheckField.Fields[1].DefaultValue == nil || *endpointCheckField.Fields[1].DefaultValue != "false" {
+		t.Errorf("Expected enable_latency_graphs default value 'false', got %v", endpointCheckField.Fields[1].DefaultValue)
+	}
+}

@@ -124,20 +124,72 @@ func parseNestedObject(field *ObjectField, obj *astObject) {
 func parseOptionalField(field *ObjectField, args []*astDataType) {
 	field.Optional = true
 
-	if len(args) >= 1 {
-		if handleObjectField(field, *args[0]) {
+	if len(args) == 0 {
+		return
+	}
+
+	// Try to parse the first argument (the type)
+	parseOptionalFieldType(field, args[0])
+
+	// Handle default value if present (second argument)
+	if len(args) >= 2 {
+		setDefaultValue(field, args[1])
+	}
+}
+
+// parseOptionalFieldType handles parsing the type argument of an optional() call
+func parseOptionalFieldType(field *ObjectField, arg *astDataType) {
+	// Handle map(object({...})) or list(object({...}))
+	if arg.Func != nil && (arg.Func.Name == "map" || arg.Func.Name == "list") {
+		if parseCollectionOfObjects(field, arg.Func) {
 			return
 		}
+	}
 
-		if flattened := flattenSimpleTypes(*args[0]); flattened != nil {
-			field.DataTypeStr = *flattened
-		}
+	// Handle object({...}) directly
+	if handleObjectField(field, *arg) {
+		return
+	}
 
-		if len(args) >= 2 {
-			if defaultFlattened := flattenSimpleTypes(*args[1]); defaultFlattened != nil {
-				field.DefaultValue = defaultFlattened
-			}
-		}
+	// Handle primitive types and other functions
+	if flattened := flattenSimpleTypes(*arg); flattened != nil {
+		field.DataTypeStr = *flattened
+	}
+}
+
+// parseCollectionOfObjects handles map(object({...})) or list(object({...})) patterns
+func parseCollectionOfObjects(field *ObjectField, fn *astFunction) bool {
+	if len(fn.Args) == 0 {
+		return false
+	}
+
+	// Check if the argument is object({...})
+	if !isObjectType(*fn.Args[0]) || fn.Args[0].Func.Args[0].Object == nil {
+		return false
+	}
+
+	objectName := getObjectName(field.Name)
+	nestedFields := parseObjectBlock(*fn.Args[0].Func.Args[0].Object)
+
+	field.DataTypeStr = fn.Name + "(object(" + objectName + "))"
+	field.NestedDataType = &objectName
+	field.Fields = nestedFields
+
+	return true
+}
+
+// setDefaultValue sets the default value for a field from an astDataType
+func setDefaultValue(field *ObjectField, defaultArg *astDataType) {
+	// Try to flatten primitives, numbers, strings, and function calls
+	if defaultFlattened := flattenSimpleTypes(*defaultArg); defaultFlattened != nil {
+		field.DefaultValue = defaultFlattened
+		return
+	}
+
+	// Handle empty object literal: {}
+	if defaultArg.Object != nil {
+		emptyObj := "{}"
+		field.DefaultValue = &emptyObj
 	}
 }
 
