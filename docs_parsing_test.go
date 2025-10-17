@@ -1,8 +1,9 @@
 package tfdocextras
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/go-test/deep"
 )
 
 func optStr(s *string) string {
@@ -37,8 +38,8 @@ func TestParseDocBlock_WithLineComments(t *testing.T) {
 		"It spans multiple lines",
 	}
 
-	if !reflect.DeepEqual(result.Content, expectedContent) {
-		t.Errorf("Expected content %v, got %v", expectedContent, result.Content)
+	if diff := deep.Equal(result.Content, expectedContent); diff != nil {
+		t.Errorf("Content mismatch:\n%v", diff)
 	}
 
 	if len(result.Directives) != 2 {
@@ -50,8 +51,8 @@ func TestParseDocBlock_WithLineComments(t *testing.T) {
 		{Name: "param", Content: "name The name parameter"},
 	}
 
-	if !reflect.DeepEqual(result.Directives, expectedDirectives) {
-		t.Errorf("Expected directives %v, got %v", expectedDirectives, result.Directives)
+	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {
+		t.Errorf("Directives mismatch:\n%v", diff)
 	}
 }
 
@@ -70,8 +71,8 @@ func TestParseDocBlock_WithBlockComment(t *testing.T) {
 		"With multiple lines",
 	}
 
-	if !reflect.DeepEqual(result.Content, expectedContent) {
-		t.Errorf("Expected content %v, got %v", expectedContent, result.Content)
+	if diff := deep.Equal(result.Content, expectedContent); diff != nil {
+		t.Errorf("Content mismatch:\n%v", diff)
 	}
 
 	if len(result.Directives) != 2 {
@@ -83,8 +84,8 @@ func TestParseDocBlock_WithBlockComment(t *testing.T) {
 		{Name: "since", Content: "2.0.0"},
 	}
 
-	if !reflect.DeepEqual(result.Directives, expectedDirectives) {
-		t.Errorf("Expected directives %v, got %v", expectedDirectives, result.Directives)
+	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {
+		t.Errorf("Directives mismatch:\n%v", diff)
 	}
 }
 
@@ -113,8 +114,8 @@ func TestParseDocBlock_MixedContent(t *testing.T) {
 		"More content after directive",
 	}
 
-	if !reflect.DeepEqual(result.Content, expectedContent) {
-		t.Errorf("Expected content %v, got %v", expectedContent, result.Content)
+	if diff := deep.Equal(result.Content, expectedContent); diff != nil {
+		t.Errorf("Content mismatch:\n%v", diff)
 	}
 
 	expectedDirectives := []DocDirective{
@@ -122,8 +123,8 @@ func TestParseDocBlock_MixedContent(t *testing.T) {
 		{Name: "returns", Content: "boolean value"},
 	}
 
-	if !reflect.DeepEqual(result.Directives, expectedDirectives) {
-		t.Errorf("Expected directives %v, got %v", expectedDirectives, result.Directives)
+	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {
+		t.Errorf("Directives mismatch:\n%v", diff)
 	}
 }
 
@@ -143,8 +144,8 @@ func TestParseDocBlock_DirectiveWithoutContent(t *testing.T) {
 	result := parseDocBlock(block)
 
 	expectedContent := []string{"Some description"}
-	if !reflect.DeepEqual(result.Content, expectedContent) {
-		t.Errorf("Expected content %v, got %v", expectedContent, result.Content)
+	if diff := deep.Equal(result.Content, expectedContent); diff != nil {
+		t.Errorf("Content mismatch:\n%v", diff)
 	}
 
 	// Check directives without content
@@ -154,8 +155,8 @@ func TestParseDocBlock_DirectiveWithoutContent(t *testing.T) {
 		{Name: "final", Content: ""},
 	}
 
-	if !reflect.DeepEqual(result.Directives, expectedDirectives) {
-		t.Errorf("Expected directives %v, got %v", expectedDirectives, result.Directives)
+	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {
+		t.Errorf("Directives mismatch:\n%v", diff)
 	}
 }
 
@@ -184,8 +185,8 @@ func TestParseDocBlock_OnlyDirectives(t *testing.T) {
 		{Name: "version", Content: "2.1.0"},
 	}
 
-	if !reflect.DeepEqual(result.Directives, expectedDirectives) {
-		t.Errorf("Expected directives %v, got %v", expectedDirectives, result.Directives)
+	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {
+		t.Errorf("Directives mismatch:\n%v", diff)
 	}
 }
 
@@ -209,8 +210,8 @@ func TestParseDocBlock_OnlyContent(t *testing.T) {
 		"Just plain documentation",
 	}
 
-	if !reflect.DeepEqual(result.Content, expectedContent) {
-		t.Errorf("Expected content %v, got %v", expectedContent, result.Content)
+	if diff := deep.Equal(result.Content, expectedContent); diff != nil {
+		t.Errorf("Content mismatch:\n%v", diff)
 	}
 
 	// Should have no directives
@@ -235,8 +236,8 @@ func TestParseDocBlock_EmptyLines(t *testing.T) {
 
 	// All lines should be trimmed to empty strings
 	expectedContent := []string{}
-	if !reflect.DeepEqual(result.Content, expectedContent) {
-		t.Errorf("Expected content %v, got %v", expectedContent, result.Content)
+	if diff := deep.Equal(result.Content, expectedContent); diff != nil {
+		t.Errorf("Content mismatch:\n%v", diff)
 	}
 
 	if len(result.Directives) != 0 {
@@ -261,8 +262,8 @@ func TestParseDocBlock_ComplexDirective(t *testing.T) {
 	result := parseDocBlock(block)
 
 	expectedContent := []string{"Function description"}
-	if !reflect.DeepEqual(result.Content, expectedContent) {
-		t.Errorf("Expected content %v, got %v", expectedContent, result.Content)
+	if diff := deep.Equal(result.Content, expectedContent); diff != nil {
+		t.Errorf("Content mismatch:\n%v", diff)
 	}
 
 	expectedDirectives := []DocDirective{
@@ -272,8 +273,8 @@ func TestParseDocBlock_ComplexDirective(t *testing.T) {
 		{Name: "throws", Content: "{ValidationError} When validation fails"},
 	}
 
-	if !reflect.DeepEqual(result.Directives, expectedDirectives) {
-		t.Errorf("Expected directives %v, got %v", expectedDirectives, result.Directives)
+	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {
+		t.Errorf("Directives mismatch:\n%v", diff)
 	}
 }
 
@@ -308,8 +309,8 @@ func TestParseDocBlock_EdgeCases(t *testing.T) {
 		{Name: "valid", Content: "content"},                 // "@valid content" -> name="valid", content="content"
 	}
 
-	if !reflect.DeepEqual(result.Directives, expectedDirectives) {
-		t.Errorf("Expected directives %v, got %v", expectedDirectives, result.Directives)
+	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {
+		t.Errorf("Directives mismatch:\n%v", diff)
 	}
 }
 
@@ -343,8 +344,8 @@ func TestParseDocBlock_EmptyBlockString(t *testing.T) {
 
 	// Empty block string will result in one empty content line after splitting by newline
 	expectedContent := []string{}
-	if !reflect.DeepEqual(result.Content, expectedContent) {
-		t.Errorf("Expected content %v for empty block string, got %v", expectedContent, result.Content)
+	if diff := deep.Equal(result.Content, expectedContent); diff != nil {
+		t.Error(diff)
 	}
 
 	if len(result.Directives) != 0 {
@@ -369,8 +370,8 @@ func TestParseDocBlock_BlockWithNewlines(t *testing.T) {
 		"Second line after empty line",
 	}
 
-	if !reflect.DeepEqual(result.Content, expectedContent) {
-		t.Errorf("Expected content %v, got %v", expectedContent, result.Content)
+	if diff := deep.Equal(result.Content, expectedContent); diff != nil {
+		t.Errorf("Content mismatch:\n%v", diff)
 	}
 
 	expectedDirectives := []DocDirective{
@@ -378,8 +379,8 @@ func TestParseDocBlock_BlockWithNewlines(t *testing.T) {
 		{Name: "param", Content: "test"},
 	}
 
-	if !reflect.DeepEqual(result.Directives, expectedDirectives) {
-		t.Errorf("Expected directives %v, got %v", expectedDirectives, result.Directives)
+	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {
+		t.Errorf("Directives mismatch:\n%v", diff)
 	}
 }
 
@@ -453,113 +454,82 @@ func TestFlattenSimpleTypes_Functions(t *testing.T) {
 	}
 }
 
-func TestParseObjectBlock_AstObject(t *testing.T) {
-	obj := astObject{
-		Pairs: []*astObjectProperty{
-			{
-				Doc: &astDocBlock{
-					Lines: []astDocString{
-						astDocString("The name of the user"),
-						astDocString(""),
-						astDocString("@since 1.0.0"),
-					},
-				},
-				Key: "enable_managed_scaling_draining",
-				Value: &astDataType{
-					Func: &astFunction{
-						Name: "optional",
-						Args: []*astDataType{
-							{
-								Primitive: strPtr("bool"),
-							},
-							{
-								Primitive: strPtr("true"),
-							},
+func TestParseIntoDocumentedStruct_ObjectWithDocStringComments(t *testing.T) {
+	var objBlock *ObjectGroup
+
+	if parsed, err := ParseIntoDocumentedStruct(`object({
+		/// The name of the user
+		///
+		/// @since 1.0.0
+		enable_managed_scaling_draining = optional(bool, true)
+		/// The age of the user
+		///
+		/// @since 1.0.0
+		enable_scale_in_protection = number
+	})`, "test_object"); err == nil && parsed != nil {
+		objBlock = parsed
+	} else {
+		t.Fatalf("Failed to parse: %v", err)
+	}
+
+	if len(objBlock.Fields) != 2 {
+		t.Fatalf("Expected 2 fields, got %d", len(objBlock.Fields))
+	}
+
+	expected := ObjectGroup{
+		ObjectField: ObjectField{
+			Name:           "test_object",
+			DataTypeStr:    "object(TestObject)",
+			NestedDataType: strPtr("TestObject"),
+			Documentation: FieldDocBlock{
+				Content:    []string{},
+				Directives: []DocDirective{},
+			},
+			Fields: []ObjectField{
+				{
+					Name: "enable_managed_scaling_draining",
+					Documentation: FieldDocBlock{
+						Content: []string{"The name of the user"},
+						Directives: []DocDirective{
+							{Name: "since", Content: "1.0.0"},
 						},
 					},
+					DataTypeStr:  "bool",
+					Optional:     true,
+					DefaultValue: strPtr("true"),
 				},
-			},
-			{
-				Doc: &astDocBlock{
-					Lines: []astDocString{
-						astDocString("The age of the user"),
-						astDocString(""),
-						astDocString("@since 1.0.0"),
+				{
+					Name: "enable_scale_in_protection",
+					Documentation: FieldDocBlock{
+						Content: []string{"The age of the user"},
+						Directives: []DocDirective{
+							{Name: "since", Content: "1.0.0"},
+						},
 					},
-				},
-				Key: "enable_scale_in_protection",
-				Value: &astDataType{
-					Primitive: strPtr("number"),
+					DataTypeStr:  "number",
+					Optional:     false,
+					DefaultValue: nil,
 				},
 			},
 		},
+		ParentDataType: strPtr(""),
 	}
 
-	actual := parseObjectBlock(obj)
-
-	if len(actual) != 2 {
-		t.Fatalf("Expected 2 fields, got %d", len(actual))
-	}
-
-	expected := []ObjectField{
-		{
-			Name: "enable_managed_scaling_draining",
-			Documentation: FieldDocBlock{
-				Content: []string{"The name of the user"},
-				Directives: []DocDirective{
-					{Name: "since", Content: "1.0.0"},
-				},
-			},
-			DataTypeStr:  "bool",
-			Optional:     true,
-			DefaultValue: strPtr("true"),
-		},
-		{
-			Name: "enable_scale_in_protection",
-			Documentation: FieldDocBlock{
-				Content: []string{"The age of the user"},
-				Directives: []DocDirective{
-					{Name: "since", Content: "1.0.0"},
-				},
-			},
-			DataTypeStr:  "number",
-			Optional:     false,
-			DefaultValue: nil,
-		},
-	}
-
-	if !reflect.DeepEqual(actual, expected) {
-		t.Errorf("Expected fields %v, got %v", expected, actual)
+	if diff := deep.Equal(*objBlock, expected); diff != nil {
+		t.Errorf("ObjectGroup mismatch:\n%v", diff)
 	}
 }
 
-func TestParseObjectFunctionBlock_OptionalObject(t *testing.T) {
-	obj := astFunction{
-		Name: "optional",
-		Args: []*astDataType{
-			{
-				Func: &astFunction{
-					Name: "object",
-					Args: []*astDataType{
-						{
-							Object: &astObject{
-								Pairs: []*astObjectProperty{
-									{
-										Key: "name",
-										Value: &astDataType{
-											Primitive: strPtr("string"),
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+func TestParseIntoDocumentedStruct_OptionalObject(t *testing.T) {
+	var objBlock *ObjectGroup
 
-	objBlock := parseObjectFunctionBlock(obj, "test_object")
+	if parsed, err := ParseIntoDocumentedStruct(`optional(object({
+		name = string
+	}))`, "test_object"); err == nil && parsed != nil {
+		objBlock = parsed
+	} else {
+		t.Fatalf("Failed to parse: %v", err)
+	}
 
 	expected := ObjectGroup{
 		ObjectField: ObjectField{
@@ -589,65 +559,23 @@ func TestParseObjectFunctionBlock_OptionalObject(t *testing.T) {
 		ParentDataType: strPtr(""),
 	}
 
-	if objBlock == nil {
-		t.Fatal("Expected non-nil ObjectGroup")
-	}
-
-	if !reflect.DeepEqual(*objBlock, expected) {
-		t.Errorf("Expected object group %v, got %v", expected, *objBlock)
+	if diff := deep.Equal(*objBlock, expected); diff != nil {
+		t.Errorf("ObjectGroup mismatch:\n%v", diff)
 	}
 }
 
-func TestParseObjectFunctionBlock_NestedObject(t *testing.T) {
-	obj := astFunction{
-		Name: "optional",
-		Args: []*astDataType{
-			{
-				Func: &astFunction{
-					Name: "object",
-					Args: []*astDataType{
-						{
-							Object: &astObject{
-								Pairs: []*astObjectProperty{
-									{
-										Key: "name",
-										Value: &astDataType{
-											Primitive: strPtr("string"),
-										},
-									},
-									{
-										Key: "address",
-										Value: &astDataType{
-											Object: &astObject{
-												Pairs: []*astObjectProperty{
-													{
-														Key: "street",
-														Value: &astDataType{
-															Primitive: strPtr("string"),
-														},
-													},
-													{
-														Key: "city",
-														Value: &astDataType{
-															Primitive: strPtr("string"),
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+func TestParseIntoDocumentedStruct_OptionalObjectWithObject(t *testing.T) {
+	var objBlock *ObjectGroup
 
-	objBlock := parseObjectFunctionBlock(obj, "user_profile")
-
-	if objBlock == nil {
+	if parsed, err := ParseIntoDocumentedStruct(`optional(object({
+	  name = string
+	  address = object({
+	    street = string
+	    city   = string
+	  })
+	}))`, "user_profile"); err == nil && parsed != nil {
+		objBlock = parsed
+	} else {
 		t.Fatal("Expected non-nil ObjectGroup")
 	}
 
@@ -713,47 +641,22 @@ func TestParseObjectFunctionBlock_NestedObject(t *testing.T) {
 		ParentDataType: strPtr(""),
 	}
 
-	if !reflect.DeepEqual(*objBlock, expected) {
-		t.Errorf("Expected object group %v, got %v", expected, *objBlock)
+	if diff := deep.Equal(*objBlock, expected); diff != nil {
+		t.Error(diff)
 	}
 }
 
-func TestParseMapFunctionBlock_MapObject(t *testing.T) {
-	obj := astFunction{
-		Name: "map",
-		Args: []*astDataType{
-			{
-				Func: &astFunction{
-					Name: "object",
-					Args: []*astDataType{
-						{
-							Object: &astObject{
-								Pairs: []*astObjectProperty{
-									{
-										Doc: &astDocBlock{
-											Lines: []astDocString{
-												astDocString("Specify the number of EC2 instances that should be running in the group"),
-												astDocString(""),
-												astDocString("@since 1.0.0"),
-											},
-										},
-										Key: "desired_instances",
-										Value: &astDataType{
-											Primitive: strPtr("number"),
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+func TestParseIntoDocumentedStruct_MapOfObjects(t *testing.T) {
+	var objBlock *ObjectGroup
 
-	objBlock := parseObjectFunctionBlock(obj, "instance_config")
-
-	if objBlock == nil {
+	if parsed, err := ParseIntoDocumentedStruct(`map(object({
+	  /// Specify the number of EC2 instances that should be running in the group
+	  ///
+	  /// @since 1.0.0
+	  desired_instances = number
+	}))`, "instance_config"); err == nil && parsed != nil {
+		objBlock = parsed
+	} else {
 		t.Fatal("Expected non-nil ObjectGroup")
 	}
 
@@ -787,68 +690,24 @@ func TestParseMapFunctionBlock_MapObject(t *testing.T) {
 		ParentDataType: strPtr("map"),
 	}
 
-	if !reflect.DeepEqual(*objBlock, expected) {
-		t.Errorf("Expected object group %v, got %v", expected, *objBlock)
+	if diff := deep.Equal(*objBlock, expected); diff != nil {
+		t.Error(diff)
 	}
 }
 
-func TestParseListFunctionBlock_ListObject(t *testing.T) {
-	obj := astFunction{
-		Name: "list",
-		Args: []*astDataType{
-			{
-				Func: &astFunction{
-					Name: "object",
-					Args: []*astDataType{
-						{
-							Object: &astObject{
-								Pairs: []*astObjectProperty{
-									{
-										Doc: &astDocBlock{
-											Lines: []astDocString{
-												astDocString("The name of the server"),
-												astDocString("@required true"),
-											},
-										},
-										Key: "server_name",
-										Value: &astDataType{
-											Primitive: strPtr("string"),
-										},
-									},
-									{
-										Doc: &astDocBlock{
-											Lines: []astDocString{
-												astDocString("The port number for the server"),
-												astDocString("@default 80"),
-											},
-										},
-										Key: "port",
-										Value: &astDataType{
-											Func: &astFunction{
-												Name: "optional",
-												Args: []*astDataType{
-													{
-														Primitive: strPtr("number"),
-													},
-													{
-														Number: strPtr("80"),
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+func TestParseIntoDocumentedStruct_ListOfObjects(t *testing.T) {
+	var objBlock *ObjectGroup
 
-	objBlock := parseObjectFunctionBlock(obj, "server_config")
-
-	if objBlock == nil {
+	if parsed, err := ParseIntoDocumentedStruct(`list(object({
+	  /// The name of the server
+	  /// @required true
+	  server_name = string
+	  /// The port number for the server
+	  /// @default 80
+	  port = optional(number, 80)
+	}))`, "server_config"); err == nil && parsed != nil {
+		objBlock = parsed
+	} else {
 		t.Fatal("Expected non-nil ObjectGroup")
 	}
 
@@ -897,74 +756,24 @@ func TestParseListFunctionBlock_ListObject(t *testing.T) {
 		ParentDataType: strPtr("list"),
 	}
 
-	if !reflect.DeepEqual(*objBlock, expected) {
-		t.Errorf("Expected object group %v, got %v", expected, *objBlock)
+	if diff := deep.Equal(*objBlock, expected); diff != nil {
+		t.Error(diff)
 	}
 }
 
-func TestParseObjectWithOptionalNestedObject(t *testing.T) {
-	obj := astFunction{
-		Name: "object",
-		Args: []*astDataType{
-			{
-				Object: &astObject{
-					Pairs: []*astObjectProperty{
-						{
-							Key: "ssh_keypair_name",
-							Value: &astDataType{
-								Primitive: strPtr("string"),
-							},
-						},
-						{
-							Key: "enable_managed_scaling",
-							Value: &astDataType{
-								Func: &astFunction{
-									Name: "optional",
-									Args: []*astDataType{
-										{
-											Func: &astFunction{
-												Name: "object",
-												Args: []*astDataType{
-													{
-														Object: &astObject{
-															Pairs: []*astObjectProperty{
-																{
-																	Key: "enable_managed_scaling_draining",
-																	Value: &astDataType{
-																		Primitive: strPtr("bool"),
-																	},
-																},
-																{
-																	Key: "enable_scale_in_protection",
-																	Value: &astDataType{
-																		Primitive: strPtr("bool"),
-																	},
-																},
-																{
-																	Key: "target_capacity_percentage",
-																	Value: &astDataType{
-																		Primitive: strPtr("number"),
-																	},
-																},
-															},
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+func TestParseIntoDocumentedStruct_ObjectWithOptionalObject(t *testing.T) {
+	var objBlock *ObjectGroup
 
-	objBlock := parseObjectFunctionBlock(obj, "root_object")
-
-	if objBlock == nil {
+	if parsed, err := ParseIntoDocumentedStruct(`object({
+	  ssh_keypair_name = string
+	  enable_managed_scaling = optional(object({
+	    enable_managed_scaling_draining = bool
+	    enable_scale_in_protection      = bool
+	    target_capacity_percentage      = number
+	  }))
+	})`, "root_object"); err == nil && parsed != nil {
+		objBlock = parsed
+	} else {
 		t.Fatal("Expected non-nil ObjectGroup")
 	}
 
@@ -1039,67 +848,24 @@ func TestParseObjectWithOptionalNestedObject(t *testing.T) {
 		ParentDataType: strPtr(""),
 	}
 
-	if !reflect.DeepEqual(*objBlock, expected) {
-		t.Errorf("Expected object group %v, got %v", expected, *objBlock)
+	if diff := deep.Equal(*objBlock, expected); diff != nil {
+		t.Error(diff)
 	}
 }
 
-func TestParseObjectWithRequiredNestedObject(t *testing.T) {
-	obj := astFunction{
-		Name: "object",
-		Args: []*astDataType{
-			{
-				Object: &astObject{
-					Pairs: []*astObjectProperty{
-						{
-							Key: "ssh_keypair_name",
-							Value: &astDataType{
-								Primitive: strPtr("string"),
-							},
-						},
-						{
-							Key: "enable_managed_scaling",
-							Value: &astDataType{
-								Func: &astFunction{
-									Name: "object",
-									Args: []*astDataType{
-										{
-											Object: &astObject{
-												Pairs: []*astObjectProperty{
-													{
-														Key: "enable_managed_scaling_draining",
-														Value: &astDataType{
-															Primitive: strPtr("bool"),
-														},
-													},
-													{
-														Key: "enable_scale_in_protection",
-														Value: &astDataType{
-															Primitive: strPtr("bool"),
-														},
-													},
-													{
-														Key: "target_capacity_percentage",
-														Value: &astDataType{
-															Primitive: strPtr("number"),
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+func TestParseIntoDocumentedStruct_ObjectWithNestedObject(t *testing.T) {
+	var objBlock *ObjectGroup
 
-	objBlock := parseObjectFunctionBlock(obj, "root_object")
-
-	if objBlock == nil {
+	if parsed, err := ParseIntoDocumentedStruct(`object({
+	  ssh_keypair_name = string
+	  enable_managed_scaling = object({
+	    enable_managed_scaling_draining = bool
+	    enable_scale_in_protection      = bool
+	    target_capacity_percentage      = number
+	  })
+	})`, "root_object"); err == nil && parsed != nil {
+		objBlock = parsed
+	} else {
 		t.Fatal("Expected non-nil ObjectGroup")
 	}
 
@@ -1174,13 +940,15 @@ func TestParseObjectWithRequiredNestedObject(t *testing.T) {
 		ParentDataType: strPtr(""),
 	}
 
-	if !reflect.DeepEqual(*objBlock, expected) {
-		t.Errorf("Expected object group %v, got %v", expected, *objBlock)
+	if diff := deep.Equal(*objBlock, expected); diff != nil {
+		t.Error(diff)
 	}
 }
 
-func TestParseComplexNestedHealthCheckObject(t *testing.T) {
-	obj, err := parseAst(`list(object({
+func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
+	var objBlock *ObjectGroup
+
+	if parsed, err := ParseIntoDocumentedStruct(`list(object({
 	  name            = string
 	  health_check = optional(object({
 		enabled                    = optional(bool, true)
@@ -1206,150 +974,203 @@ func TestParseComplexNestedHealthCheckObject(t *testing.T) {
 		  enable_latency_graphs = optional(bool, false)
 		}), null)
 	  }), null)
-	}))`)
-
-	if err != nil {
-		t.Fatalf("Failed to parse AST: %v", err)
-	}
-
-	if obj.Expr == nil || obj.Expr.Func == nil {
-		t.Fatal("Expected non-nil function expression")
-	}
-
-	objBlock := parseObjectFunctionBlock(*obj.Expr.Func, "health_check_config")
-
-	if objBlock == nil {
+	}))`, "health_check_config"); err == nil && parsed != nil {
+		objBlock = parsed
+	} else {
 		t.Fatal("Expected non-nil ObjectGroup")
 	}
 
-	// Verify the top-level structure
-	if objBlock.ObjectField.Name != "health_check_config" {
-		t.Errorf("Expected name 'health_check_config', got '%s'", objBlock.ObjectField.Name)
+	expected := ObjectGroup{
+		ObjectField: ObjectField{
+			Name:           "health_check_config",
+			DataTypeStr:    "list(object(HealthCheckConfig))",
+			NestedDataType: strPtr("HealthCheckConfig"),
+			Documentation: FieldDocBlock{
+				Content:    []string{},
+				Directives: []DocDirective{},
+			},
+			Fields: []ObjectField{
+				{
+					Name: "name",
+					Documentation: FieldDocBlock{
+						Content:    []string{},
+						Directives: []DocDirective{},
+					},
+					DataTypeStr:  "string",
+					Optional:     false,
+					DefaultValue: nil,
+				},
+				{
+					Name: "health_check",
+					Documentation: FieldDocBlock{
+						Content:    []string{},
+						Directives: []DocDirective{},
+					},
+					DataTypeStr:    "object(HealthCheck)",
+					NestedDataType: strPtr("HealthCheck"),
+					Optional:       true,
+					DefaultValue:   strPtr("null"),
+					Fields: []ObjectField{
+						{
+							Name: "enabled",
+							Documentation: FieldDocBlock{
+								Content:    []string{},
+								Directives: []DocDirective{},
+							},
+							DataTypeStr:  "bool",
+							Optional:     true,
+							DefaultValue: strPtr("true"),
+						},
+						{
+							Name: "invert_health_check_status",
+							Documentation: FieldDocBlock{
+								Content:    []string{},
+								Directives: []DocDirective{},
+							},
+							DataTypeStr:  "bool",
+							Optional:     true,
+							DefaultValue: strPtr("false"),
+						},
+						{
+							Name: "calculated_check",
+							Documentation: FieldDocBlock{
+								Content:    []string{},
+								Directives: []DocDirective{},
+							},
+							DataTypeStr:    "object(CalculatedCheck)",
+							NestedDataType: strPtr("CalculatedCheck"),
+							Optional:       true,
+							DefaultValue:   strPtr("null"),
+							Fields: []ObjectField{
+								{
+									Name: "health_checks_to_monitor",
+									Documentation: FieldDocBlock{
+										Content:    []string{},
+										Directives: []DocDirective{},
+									},
+									DataTypeStr:  "list(string)",
+									Optional:     false,
+									DefaultValue: nil,
+								},
+								{
+									Name: "healthy_threshold",
+									Documentation: FieldDocBlock{
+										Content:    []string{},
+										Directives: []DocDirective{},
+									},
+									DataTypeStr:  "number",
+									Optional:     true,
+									DefaultValue: strPtr("null"),
+								},
+							},
+						},
+						{
+							Name: "cloudwatch_alarm_check",
+							Documentation: FieldDocBlock{
+								Content:    []string{},
+								Directives: []DocDirective{},
+							},
+							DataTypeStr:    "object(CloudwatchAlarmCheck)",
+							NestedDataType: strPtr("CloudwatchAlarmCheck"),
+							Optional:       true,
+							DefaultValue:   strPtr("null"),
+							Fields: []ObjectField{
+								{
+									Name: "alarm_name",
+									Documentation: FieldDocBlock{
+										Content:    []string{},
+										Directives: []DocDirective{},
+									},
+									DataTypeStr:  "string",
+									Optional:     false,
+									DefaultValue: nil,
+								},
+								{
+									Name: "alarm_region",
+									Documentation: FieldDocBlock{
+										Content:    []string{},
+										Directives: []DocDirective{},
+									},
+									DataTypeStr:  "string",
+									Optional:     true,
+									DefaultValue: strPtr("null"),
+								},
+							},
+						},
+						{
+							Name: "cloudwatch_alarms",
+							Documentation: FieldDocBlock{
+								Content:    []string{},
+								Directives: []DocDirective{},
+							},
+							DataTypeStr:    "map(object(CloudwatchAlarms))",
+							NestedDataType: strPtr("CloudwatchAlarms"),
+							Optional:       true,
+							DefaultValue:   strPtr("{}"),
+							Fields: []ObjectField{
+								{
+									Name: "metric_name",
+									Documentation: FieldDocBlock{
+										Content:    []string{},
+										Directives: []DocDirective{},
+									},
+									DataTypeStr:  "string",
+									Optional:     false,
+									DefaultValue: nil,
+								},
+								{
+									Name: "expression",
+									Documentation: FieldDocBlock{
+										Content:    []string{},
+										Directives: []DocDirective{},
+									},
+									DataTypeStr:  "string",
+									Optional:     false,
+									DefaultValue: nil,
+								},
+							},
+						},
+						{
+							Name: "endpoint_check",
+							Documentation: FieldDocBlock{
+								Content:    []string{},
+								Directives: []DocDirective{},
+							},
+							DataTypeStr:    "object(EndpointCheck)",
+							NestedDataType: strPtr("EndpointCheck"),
+							Optional:       true,
+							DefaultValue:   strPtr("null"),
+							Fields: []ObjectField{
+								{
+									Name: "url",
+									Documentation: FieldDocBlock{
+										Content:    []string{},
+										Directives: []DocDirective{},
+									},
+									DataTypeStr:  "string",
+									Optional:     false,
+									DefaultValue: nil,
+								},
+								{
+									Name: "enable_latency_graphs",
+									Documentation: FieldDocBlock{
+										Content:    []string{},
+										Directives: []DocDirective{},
+									},
+									DataTypeStr:  "bool",
+									Optional:     true,
+									DefaultValue: strPtr("false"),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		ParentDataType: strPtr("list"),
 	}
 
-	if objBlock.ObjectField.DataTypeStr != "list(object(HealthCheckConfig))" {
-		t.Errorf("Expected DataTypeStr 'list(object(HealthCheckConfig))', got '%s'", objBlock.ObjectField.DataTypeStr)
-	}
-
-	if objBlock.ParentDataType == nil || *objBlock.ParentDataType != "list" {
-		t.Errorf("Expected ParentDataType 'list', got %v", objBlock.ParentDataType)
-	}
-
-	// Verify top-level fields: name and health_check
-	if len(objBlock.ObjectField.Fields) != 2 {
-		t.Fatalf("Expected 2 top-level fields, got %d", len(objBlock.ObjectField.Fields))
-	}
-
-	// Verify 'name' field
-	nameField := objBlock.ObjectField.Fields[0]
-	if nameField.Name != "name" {
-		t.Errorf("Expected first field 'name', got '%s'", nameField.Name)
-	}
-	if nameField.DataTypeStr != "string" {
-		t.Errorf("Expected name DataTypeStr 'string', got '%s'", nameField.DataTypeStr)
-	}
-	if nameField.Optional {
-		t.Error("Expected name to not be optional")
-	}
-
-	// Verify 'health_check' field
-	healthCheckField := objBlock.ObjectField.Fields[1]
-	if healthCheckField.Name != "health_check" {
-		t.Errorf("Expected second field 'health_check', got '%s'", healthCheckField.Name)
-	}
-	if !healthCheckField.Optional {
-		t.Error("Expected health_check to be optional")
-	}
-	if healthCheckField.DefaultValue == nil || *healthCheckField.DefaultValue != "null" {
-		t.Errorf("Expected health_check default value 'null', got %v", healthCheckField.DefaultValue)
-	}
-
-	// Verify health_check has 6 nested fields
-	if len(healthCheckField.Fields) != 6 {
-		t.Fatalf("Expected 6 health_check fields, got %d", len(healthCheckField.Fields))
-	}
-
-	expectedHealthCheckFields := []string{
-		"enabled",
-		"invert_health_check_status",
-		"calculated_check",
-		"cloudwatch_alarm_check",
-		"cloudwatch_alarms",
-		"endpoint_check",
-	}
-
-	for i, expectedName := range expectedHealthCheckFields {
-		if healthCheckField.Fields[i].Name != expectedName {
-			t.Errorf("Expected health_check field %d to be '%s', got '%s'", i, expectedName, healthCheckField.Fields[i].Name)
-		}
-	}
-
-	// Verify 'enabled' field
-	enabledField := healthCheckField.Fields[0]
-	if !enabledField.Optional {
-		t.Error("Expected enabled to be optional")
-	}
-	if enabledField.DataTypeStr != "bool" {
-		t.Errorf("Expected enabled DataTypeStr 'bool', got '%s'", enabledField.DataTypeStr)
-	}
-	if enabledField.DefaultValue == nil || *enabledField.DefaultValue != "true" {
-		t.Errorf("Expected enabled default value 'true', got %v", enabledField.DefaultValue)
-	}
-
-	// Verify 'calculated_check' nested object
-	calculatedCheckField := healthCheckField.Fields[2]
-	if !calculatedCheckField.Optional {
-		t.Error("Expected calculated_check to be optional")
-	}
-	if len(calculatedCheckField.Fields) != 2 {
-		t.Fatalf("Expected 2 calculated_check fields, got %d", len(calculatedCheckField.Fields))
-	}
-
-	// Verify 'health_checks_to_monitor' is a list
-	healthChecksToMonitorField := calculatedCheckField.Fields[0]
-	if healthChecksToMonitorField.Name != "health_checks_to_monitor" {
-		t.Errorf("Expected 'health_checks_to_monitor', got '%s'", healthChecksToMonitorField.Name)
-	}
-	if healthChecksToMonitorField.DataTypeStr != "list(string)" {
-		t.Errorf("Expected DataTypeStr 'list(string)', got '%s'", healthChecksToMonitorField.DataTypeStr)
-	}
-
-	// Verify 'cloudwatch_alarms' is a map of objects
-	cloudwatchAlarmsField := healthCheckField.Fields[4]
-	if !cloudwatchAlarmsField.Optional {
-		t.Error("Expected cloudwatch_alarms to be optional")
-	}
-	if cloudwatchAlarmsField.DataTypeStr != "map(object(CloudwatchAlarms))" {
-		t.Errorf("Expected DataTypeStr 'map(object(CloudwatchAlarms))', got '%s'", cloudwatchAlarmsField.DataTypeStr)
-	}
-	if len(cloudwatchAlarmsField.Fields) != 2 {
-		t.Fatalf("Expected 2 cloudwatch_alarms fields, got %d", len(cloudwatchAlarmsField.Fields))
-	}
-	if cloudwatchAlarmsField.Fields[0].Name != "metric_name" {
-		t.Errorf("Expected 'metric_name', got '%s'", cloudwatchAlarmsField.Fields[0].Name)
-	}
-	if cloudwatchAlarmsField.Fields[1].Name != "expression" {
-		t.Errorf("Expected 'expression', got '%s'", cloudwatchAlarmsField.Fields[1].Name)
-	}
-
-	// Verify 'endpoint_check' nested object
-	endpointCheckField := healthCheckField.Fields[5]
-	if !endpointCheckField.Optional {
-		t.Error("Expected endpoint_check to be optional")
-	}
-	if len(endpointCheckField.Fields) != 2 {
-		t.Fatalf("Expected 2 endpoint_check fields, got %d", len(endpointCheckField.Fields))
-	}
-	if endpointCheckField.Fields[0].Name != "url" {
-		t.Errorf("Expected 'url', got '%s'", endpointCheckField.Fields[0].Name)
-	}
-	if endpointCheckField.Fields[1].Name != "enable_latency_graphs" {
-		t.Errorf("Expected 'enable_latency_graphs', got '%s'", endpointCheckField.Fields[1].Name)
-	}
-	if !endpointCheckField.Fields[1].Optional {
-		t.Error("Expected enable_latency_graphs to be optional")
-	}
-	if endpointCheckField.Fields[1].DefaultValue == nil || *endpointCheckField.Fields[1].DefaultValue != "false" {
-		t.Errorf("Expected enable_latency_graphs default value 'false', got %v", endpointCheckField.Fields[1].DefaultValue)
+	if diff := deep.Equal(*objBlock, expected); diff != nil {
+		t.Error(diff)
 	}
 }
