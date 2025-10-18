@@ -72,6 +72,10 @@ func isOptionalType(data astDataType) bool {
 	return data.Func != nil && data.Func.Name == "optional"
 }
 
+func isCollectionType(data astDataType) bool {
+	return data.Func != nil && (data.Func.Name == "map" || data.Func.Name == "list")
+}
+
 func iterateDocLines(block astDocBlock, fn func(line string)) {
 	if block.Block != nil {
 		lines := strings.Split(string(*block.Block), "\n")
@@ -114,11 +118,9 @@ func handleObjectField(field *ObjectField, dataType astDataType) bool {
 
 func parseNestedObject(field *ObjectField, obj *astObject) {
 	objectName := getObjectName(field.Name)
-	nestedFields := parseObjectBlock(*obj)
-
+	field.Fields = parseObjectBlock(*obj)
 	field.DataTypeStr = "object(" + objectName + ")"
 	field.NestedDataType = &objectName
-	field.Fields = nestedFields
 }
 
 func parseOptionalField(field *ObjectField, args []*astDataType) {
@@ -140,7 +142,7 @@ func parseOptionalField(field *ObjectField, args []*astDataType) {
 // parseOptionalFieldType handles parsing the type argument of an optional() call
 func parseOptionalFieldType(field *ObjectField, arg *astDataType) {
 	// Handle map(object({...})) or list(object({...}))
-	if arg.Func != nil && (arg.Func.Name == "map" || arg.Func.Name == "list") {
+	if isCollectionType(*arg) {
 		if parseCollectionOfObjects(field, arg.Func) {
 			return
 		}
@@ -169,11 +171,9 @@ func parseCollectionOfObjects(field *ObjectField, fn *astFunction) bool {
 	}
 
 	objectName := getObjectName(field.Name)
-	nestedFields := parseObjectBlock(*fn.Args[0].Func.Args[0].Object)
-
+	field.Fields = parseObjectBlock(*fn.Args[0].Func.Args[0].Object)
 	field.DataTypeStr = fn.Name + "(object(" + objectName + "))"
 	field.NestedDataType = &objectName
-	field.Fields = nestedFields
 
 	return true
 }
@@ -251,18 +251,11 @@ func parseDocBlock(block astDocBlock) FieldDocBlock {
 
 	iterateDocLines(block, func(line string) {
 		if strings.HasPrefix(line, "@") {
-			parts := strings.SplitN(line[1:], " ", 2)
-			if len(parts) == 2 {
-				doc.Directives = append(doc.Directives, DocDirective{
-					Name:    parts[0],
-					Content: parts[1],
-				})
-			} else if len(parts) == 1 {
-				doc.Directives = append(doc.Directives, DocDirective{
-					Name:    parts[0],
-					Content: "",
-				})
-			}
+			name, content, _ := strings.Cut(line[1:], " ")
+			doc.Directives = append(doc.Directives, DocDirective{
+				Name:    name,
+				Content: content,
+			})
 		} else {
 			doc.Content = append(doc.Content, strings.TrimSpace(line))
 		}
@@ -283,20 +276,47 @@ func parseObjectBlock(obj astObject) []ObjectField {
 			field.Documentation = parseDocBlock(*pair.Doc)
 		}
 
-		if isOptionalType(*pair.Value) {
-			parseOptionalField(&field, pair.Value.Func.Args)
-		} else if handleObjectField(&field, *pair.Value) {
-			// Object function handled by helper
-		} else if flattened := flattenSimpleTypes(*pair.Value); flattened != nil {
-			field.DataTypeStr = *flattened
-		} else if pair.Value.Object != nil {
-			parseNestedObject(&field, pair.Value.Object)
-		}
-
+		parseFieldType(&field, pair.Value)
 		fields = append(fields, field)
 	}
 
 	return fields
+}
+
+// parseFieldType determines and sets the type information for a field
+func parseFieldType(field *ObjectField, value *astDataType) {
+	switch {
+	case isOptionalType(*value):
+		parseOptionalField(field, value.Func.Args)
+		return
+	case isCollectionType(*value):
+		// Handle map(object({...})) or list(object({...}))
+		if parseCollectionOfObjects(field, value.Func) {
+			return
+		}
+		// Fall back to flattening if not a collection of objects
+	case handleObjectField(field, *value):
+		return // Object function handled by helper
+	case value.Object != nil:
+		parseNestedObject(field, value.Object)
+		return
+	}
+
+	// Fallback: try to flatten the type into a simple string
+	if flattened := flattenSimpleTypes(*value); flattened != nil {
+		field.DataTypeStr = *flattened
+	}
+}
+
+// buildObjectTypeName constructs an object type string with optional prefix (map, list, etc.)
+func buildObjectTypeName(name, prefix string) string {
+	objectName := getObjectName(name)
+	objectType := "object(" + objectName + ")"
+
+	if prefix != "" {
+		return prefix + "(" + objectType + ")"
+	}
+	return objectType
 }
 
 func parseObjectFunctionBlock(fxn astFunction, name string) *ObjectGroup {
@@ -318,28 +338,17 @@ func parseObjectFunctionBlock(fxn astFunction, name string) *ObjectGroup {
 		ParentDataType: &collectionPrefix,
 	}
 
-	var fields []ObjectField
-
 	// Handle optional(object({...}))
-	if fxn.Name == "optional" && len(fxn.Args) > 0 {
+	if fxn.Name == "optional" {
 		objGroup.Optional = true
 	}
 
 	if len(fxn.Args) > 0 {
-		fields = extractObjectFromArg(fxn.Args[0])
-	}
-
-	if fields != nil {
-		objGroup.Fields = fields
-		objectName := getObjectName(name)
-		objectTypeName := "object(" + objectName + ")"
-
-		objGroup.NestedDataType = &objectName
-
-		if collectionPrefix != "" {
-			objGroup.DataTypeStr = collectionPrefix + "(" + objectTypeName + ")"
-		} else {
-			objGroup.DataTypeStr = objectTypeName
+		if fields := extractObjectFromArg(fxn.Args[0]); fields != nil {
+			objGroup.Fields = fields
+			objectName := getObjectName(name)
+			objGroup.NestedDataType = &objectName
+			objGroup.DataTypeStr = buildObjectTypeName(name, collectionPrefix)
 		}
 	}
 

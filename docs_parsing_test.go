@@ -1174,3 +1174,70 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 		t.Error(diff)
 	}
 }
+
+func TestParseIntoDocumentedStruct_ObjectWithMapOfObjects(t *testing.T) {
+	var objBlock *ObjectGroup
+
+	if parsed, err := ParseIntoDocumentedStruct(`object({
+	  configurations = map(object({
+	    setting_a = string
+	    setting_b = number
+	  }))
+	})`, "config_object"); err == nil && parsed != nil {
+		objBlock = parsed
+	} else {
+		t.Fatal("Expected non-nil ObjectGroup")
+	}
+
+	expected := ObjectGroup{
+		ObjectField: ObjectField{
+			Name:           "config_object",
+			DataTypeStr:    "object(ConfigObject)",
+			NestedDataType: strPtr("ConfigObject"),
+			Documentation: FieldDocBlock{
+				Content:    []string{},
+				Directives: []DocDirective{},
+			},
+			Fields: []ObjectField{
+				{
+					Name: "configurations",
+					Documentation: FieldDocBlock{
+						Content:    []string{},
+						Directives: []DocDirective{},
+					},
+					DataTypeStr:    "map(object(Configurations))",
+					NestedDataType: strPtr("Configurations"),
+					Optional:       false,
+					DefaultValue:   nil,
+					Fields: []ObjectField{
+						{
+							Name: "setting_a",
+							Documentation: FieldDocBlock{
+								Content:    []string{},
+								Directives: []DocDirective{},
+							},
+							DataTypeStr:  "string",
+							Optional:     false,
+							DefaultValue: nil,
+						},
+						{
+							Name: "setting_b",
+							Documentation: FieldDocBlock{
+								Content:    []string{},
+								Directives: []DocDirective{},
+							},
+							DataTypeStr:  "number",
+							Optional:     false,
+							DefaultValue: nil,
+						},
+					},
+				},
+			},
+		},
+		ParentDataType: strPtr(""),
+	}
+
+	if diff := deep.Equal(*objBlock, expected); diff != nil {
+		t.Error(diff)
+	}
+}
