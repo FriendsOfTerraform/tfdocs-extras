@@ -247,9 +247,21 @@ func flattenSimpleTypes(data astDataType) *string {
 }
 
 func parseDocBlock(block astDocBlock) FieldDocBlock {
+	lineNo := 1
+	indentation := ""
 	doc := FieldDocBlock{}
 
 	iterateDocLines(block, func(line string) {
+		trimmed := strings.TrimLeft(line, " \t")
+
+		if lineNo == 1 {
+			indentation = line[:len(line)-len(trimmed)]
+		}
+
+		if strings.HasPrefix(line, indentation) {
+			line = line[len(indentation):]
+		}
+
 		if strings.HasPrefix(line, "@") {
 			name, content, _ := strings.Cut(line[1:], " ")
 			doc.Directives = append(doc.Directives, DocDirective{
@@ -259,6 +271,8 @@ func parseDocBlock(block astDocBlock) FieldDocBlock {
 		} else {
 			doc.Content = append(doc.Content, strings.TrimSpace(line))
 		}
+
+		lineNo++
 	})
 
 	doc.Content = trimEmptyLines(doc.Content)
@@ -353,6 +367,15 @@ func parseObjectFunctionBlock(fxn astFunction, name string) *ObjectGroup {
 	}
 
 	return objGroup
+}
+
+func ParseStringIntoDocBlock(input string) FieldDocBlock {
+	str := astDocBlockString(input)
+	blk := astDocBlock{
+		Block: &str,
+	}
+
+	return parseDocBlock(blk)
 }
 
 // ParseIntoDocumentedStruct parses a Terraform type definition string into a documented object group.
