@@ -29,8 +29,32 @@ type TableRow struct {
 	Attributes   []TableRowAttribute `json:"attributes,omitempty"`
 }
 
+func (row *TableRow) GetAnchor() string {
+	if row.ComplexType == nil {
+		return ""
+	}
+
+	return strings.ToLower(*row.ComplexType)
+}
+
+func (row *TableRow) GetParentType() [2]string {
+	if row.ComplexType == nil {
+		return [2]string{"", ""}
+	}
+
+	values := strings.Split(row.Type, *row.ComplexType)
+
+	if len(values) == 2 {
+		return [2]string{values[0], values[1]}
+	}
+
+	return [2]string{"", ""}
+}
+
 type TableData struct {
-	Rows []TableRow `json:"rows,omitempty"`
+	Description string              `json:"description"`
+	Attributes  []TableRowAttribute `json:"attributes"`
+	Rows        []TableRow          `json:"rows,omitempty"`
 }
 
 type TemplateData struct {
@@ -44,7 +68,9 @@ var inputsTmplContent embed.FS
 
 func newTableData() TableData {
 	return TableData{
-		Rows: []TableRow{},
+		Description: "",
+		Attributes:  []TableRowAttribute{},
+		Rows:        []TableRow{},
 	}
 }
 
@@ -69,12 +95,23 @@ func parseModuleInputs(inputs []*terraform.Input) *TemplateData {
 			}
 		}
 
+		docBlk := tfdocextras.ParseStringIntoDocBlock(string(input.Description))
+
 		tableRow := TableRow{
 			Type:         string(input.Type),
 			Name:         input.Name,
 			DefaultValue: input.GetValue(),
-			Description:  string(input.Description),
+			Description:  strings.Join(docBlk.Content, "\n"),
 			Attributes:   []TableRowAttribute{},
+		}
+
+		for _, attr := range docBlk.Directives {
+			attribute := TableRowAttribute{
+				Name:    attr.Name,
+				Content: attr.Content,
+			}
+
+			tableRow.Attributes = append(tableRow.Attributes, attribute)
 		}
 
 		if extras.ObjectField.NestedDataType != nil {
@@ -82,10 +119,10 @@ func parseModuleInputs(inputs []*terraform.Input) *TemplateData {
 			tableRow.ComplexType = extras.ObjectField.NestedDataType
 		}
 
-		if extras.Optional {
-			templateData.OptionalInputs.Rows = append(templateData.OptionalInputs.Rows, tableRow)
-		} else {
+		if input.Required {
 			templateData.RequiredInputs.Rows = append(templateData.RequiredInputs.Rows, tableRow)
+		} else {
+			templateData.OptionalInputs.Rows = append(templateData.OptionalInputs.Rows, tableRow)
 		}
 
 		recordNested(extras.ObjectField, templateData.NestedInputs)
@@ -105,6 +142,16 @@ func recordNested(group tfdocextras.ObjectField, record map[string]TableData) {
 
 	if group.Fields != nil && len(group.Fields) > 0 {
 		data := newTableData()
+		data.Description = strings.Join(group.Documentation.Content, "\n")
+
+		for _, attr := range group.Documentation.Directives {
+			attribute := TableRowAttribute{
+				Name:    attr.Name,
+				Content: attr.Content,
+			}
+
+			data.Attributes = append(data.Attributes, attribute)
+		}
 
 		for _, field := range group.Fields {
 			row := TableRow{
@@ -116,7 +163,7 @@ func recordNested(group tfdocextras.ObjectField, record map[string]TableData) {
 			}
 
 			if field.NestedDataType != nil {
-				row.Type = *field.NestedDataType
+				row.ComplexType = field.NestedDataType
 			}
 
 			if field.DefaultValue != nil {
@@ -166,7 +213,11 @@ func main() {
 	}
 
 	// Generate the template output
-	tmpl, err := template.ParseFS(inputsTmplContent, "templates/inputs.tmpl")
+	tmpl, err := template.New("inputs.tmpl").Funcs(template.FuncMap{
+		"indent": func(spaces int, str string) string {
+			return "\n" + strings.Repeat("  ", spaces)
+		},
+	}).ParseFS(inputsTmplContent, "templates/inputs.tmpl")
 	if err != nil {
 		panic(err)
 	}
