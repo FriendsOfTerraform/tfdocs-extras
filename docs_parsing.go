@@ -369,7 +369,7 @@ func parseObjectFunctionBlock(fxn astFunction, name string) *ObjectGroup {
 	return objGroup
 }
 
-func ParseStringIntoDocBlock(input string) FieldDocBlock {
+func parseStringIntoDocBlock(input string) FieldDocBlock {
 	str := astDocBlockString(input)
 	blk := astDocBlock{
 		Block: &str,
