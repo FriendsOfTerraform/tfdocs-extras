@@ -5,28 +5,38 @@ import (
 	"strings"
 )
 
-// Compile regex patterns once at package initialization for better performance
 var (
 	quoteAndUrlPattern = regexp.MustCompile(`^"([^"]+)"\s+(.+)$`)
-	braceAndUrlPattern = regexp.MustCompile(`^\{([^}]+)\}\s+(.+)$`)
+	braceAndUrlPattern = regexp.MustCompile(`^\{([^}]+)}\s+(.+)$`)
 )
 
-type ExampleDirective struct {
-	Name      string
-	Reference string
+type DirectiveType int
+
+const (
+	DirUnsupported DirectiveType = iota
+	DirDeprecated
+	DirExample
+	DirLink
+	DirRegex
+	DirSee
+	DirSince
+)
+
+const (
+	IsValid byte = 1 << iota
+	IsInvalid
+	IsNamedLink
+	IsReferenceLink
+)
+
+type ParsedDirective struct {
+	Type   DirectiveType
+	First  string
+	Second string
+	Flags  byte
 }
 
-type NamedLinkDirective struct {
-	Name string
-	URL  string
-}
-
-type ReferenceLinkDirective struct {
-	Reference string
-	URL       string
-}
-
-func ParseDirective(name string, line string) interface{} {
+func ParseDirective(name string, line string) ParsedDirective {
 	line = strings.TrimSpace(line)
 
 	switch name {
@@ -34,39 +44,89 @@ func ParseDirective(name string, line string) interface{} {
 		return parseLinkDirective(line)
 	case "example":
 		return parseExampleDirective(line)
+	case "regex":
+		return parseRegexDirective(line)
+	case "deprecated":
+		return newBasicDirective(DirDeprecated, line)
+	case "see":
+		return newBasicDirective(DirSee, line)
+	case "since":
+		return newBasicDirective(DirSince, line)
 	default:
-		return nil
+		return newInvalidDirective(DirUnsupported)
 	}
 }
 
-func parseLinkDirective(line string) interface{} {
+func newBasicDirective(dt DirectiveType, content string) ParsedDirective {
+	return ParsedDirective{
+		Type:   dt,
+		First:  content,
+		Second: "",
+		Flags:  IsValid,
+	}
+}
+
+func newInvalidDirective(dt DirectiveType) ParsedDirective {
+	return ParsedDirective{
+		Type:   dt,
+		First:  "",
+		Second: "",
+		Flags:  IsInvalid,
+	}
+}
+
+func parseExampleDirective(line string) ParsedDirective {
+	if matches := quoteAndUrlPattern.FindStringSubmatch(line); len(matches) == 3 {
+		return ParsedDirective{
+			Type:   DirExample,
+			First:  matches[1],
+			Second: matches[2],
+			Flags:  IsValid,
+		}
+	}
+
+	return newInvalidDirective(DirExample)
+}
+
+func parseLinkDirective(line string) ParsedDirective {
 	if strings.HasPrefix(line, "\"") {
 		if matches := quoteAndUrlPattern.FindStringSubmatch(line); len(matches) == 3 {
-			return NamedLinkDirective{
-				Name: matches[1],
-				URL:  matches[2],
+			return ParsedDirective{
+				Type:   DirLink,
+				First:  matches[1],
+				Second: matches[2],
+				Flags:  IsValid | IsNamedLink,
 			}
 		}
 	}
 
 	if strings.HasPrefix(line, "{") {
 		if matches := braceAndUrlPattern.FindStringSubmatch(line); len(matches) == 3 {
-			return ReferenceLinkDirective{
-				Reference: matches[1],
-				URL:       matches[2],
+			return ParsedDirective{
+				Type:   DirLink,
+				First:  matches[1],
+				Second: matches[2],
+				Flags:  IsValid | IsReferenceLink,
 			}
 		}
 	}
 
-	return nil
+	return newInvalidDirective(DirLink)
 }
 
-func parseExampleDirective(line string) interface{} {
-	if matches := quoteAndUrlPattern.FindStringSubmatch(line); len(matches) == 3 {
-		return ExampleDirective{
-			Name:      matches[1],
-			Reference: matches[2],
+func parseRegexDirective(line string) ParsedDirective {
+	if strings.HasPrefix(line, "/") && strings.HasSuffix(line, "/") {
+		pattern := line[1 : len(line)-1]
+
+		if _, err := regexp.Compile(pattern); err == nil {
+			return ParsedDirective{
+				Type:   DirRegex,
+				First:  pattern,
+				Second: "",
+				Flags:  IsValid,
+			}
 		}
 	}
-	return nil
+
+	return newInvalidDirective(DirRegex)
 }

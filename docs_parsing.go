@@ -9,8 +9,9 @@ import (
 
 // DocDirective represents a documentation directive like @since, @param, etc.
 type DocDirective struct {
-	Name    string `json:"name"`
-	Content string `json:"content"`
+	Name       string          `json:"name"`
+	Parsed     ParsedDirective `json:"parsed"`
+	RawContent string          `json:"rawContent"`
 }
 
 // FieldDocBlock contains parsed documentation for a field
@@ -265,8 +266,9 @@ func parseDocBlock(block astDocBlock) FieldDocBlock {
 		if strings.HasPrefix(line, "@") {
 			name, content, _ := strings.Cut(line[1:], " ")
 			doc.Directives = append(doc.Directives, DocDirective{
-				Name:    name,
-				Content: content,
+				Name:       name,
+				Parsed:     ParseDirective(name, content),
+				RawContent: content,
 			})
 		} else {
 			doc.Content = append(doc.Content, strings.TrimSpace(line))

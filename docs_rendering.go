@@ -86,7 +86,7 @@ func recordNested(group ObjectField, record map[string]TableData) {
 		for _, attr := range group.Documentation.Directives {
 			attribute := TableRowAttribute{
 				Name:    attr.Name,
-				Content: attr.Content,
+				Content: attr.RawContent,
 			}
 
 			data.Attributes = append(data.Attributes, attribute)
@@ -112,7 +112,7 @@ func recordNested(group ObjectField, record map[string]TableData) {
 			for _, attr := range field.Documentation.Directives {
 				attribute := TableRowAttribute{
 					Name:    attr.Name,
-					Content: attr.Content,
+					Content: attr.RawContent,
 				}
 
 				row.Attributes = append(row.Attributes, attribute)
@@ -155,7 +155,7 @@ func ParseModuleInputsIntoManifest(inputs []*terraform.Input) *InputsManifest {
 		for _, attr := range docBlk.Directives {
 			attribute := TableRowAttribute{
 				Name:    attr.Name,
-				Content: attr.Content,
+				Content: attr.RawContent,
 			}
 
 			tableRow.Attributes = append(tableRow.Attributes, attribute)
