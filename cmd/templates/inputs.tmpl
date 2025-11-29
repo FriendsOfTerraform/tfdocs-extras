@@ -3,6 +3,22 @@
         {{- .Description}}
     {{- end}}
 
+    {{if .Examples}}
+        {{- indent 0 ""}}**Examples:**
+
+        {{- range .Examples}}
+            {{- indent 0 ""}}- [{{.Name}}]({{.Content}})
+        {{- end}}
+    {{- end}}
+
+    {{if .Links}}
+        {{- indent 0 ""}}**Links:**
+
+        {{- range .Links}}
+            {{- indent 0 ""}}- [{{.Name}}]({{.Content}})
+        {{- end}}
+    {{- end}}
+
     {{if .Attributes}}
         {{- range .Attributes}}
             {{- indent 0 ""}}**{{.Name}}:** {{.Content}}
@@ -61,4 +77,8 @@
 
 {{template "table" $input}}
 
+{{end}}
+
+{{range $key, $value := .ReferenceLinks}}
+[{{$key}}]: {{$value}}
 {{end}}

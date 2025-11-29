@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/terraform-docs/terraform-docs/terraform"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 const ExtrasMarkerStart = "<!-- TFDOCS_EXTRAS_START -->"
@@ -22,6 +24,8 @@ type TableRow struct {
 	DefaultValue string              `json:"default_value,omitempty"`
 	Description  string              `json:"description,omitempty"`
 	Attributes   []TableRowAttribute `json:"attributes,omitempty"`
+	Examples     []TableRowAttribute `json:"examples,omitempty"`
+	Links        []TableRowAttribute `json:"links,omitempty"`
 }
 
 func (row *TableRow) GetAnchor() string {
@@ -49,6 +53,8 @@ func (row *TableRow) GetParentType() [2]string {
 type TableData struct {
 	Description string              `json:"description"`
 	Attributes  []TableRowAttribute `json:"attributes"`
+	Examples    []TableRowAttribute `json:"examples,omitempty"`
+	Links       []TableRowAttribute `json:"links,omitempty"`
 	Rows        []TableRow          `json:"rows,omitempty"`
 }
 
@@ -56,6 +62,7 @@ type InputsManifest struct {
 	RequiredInputs TableData            `json:"required_inputs,omitempty"`
 	OptionalInputs TableData            `json:"optional_inputs,omitempty"`
 	NestedInputs   map[string]TableData `json:"nested_inputs,omitempty"`
+	ReferenceLinks map[string]string    `json:"reference_links,omitempty"`
 }
 
 func newTableData() TableData {
@@ -71,10 +78,57 @@ func newTemplateData() *InputsManifest {
 		RequiredInputs: newTableData(),
 		OptionalInputs: newTableData(),
 		NestedInputs:   make(map[string]TableData),
+		ReferenceLinks: make(map[string]string),
 	}
 }
 
-func recordNested(group ObjectField, record map[string]TableData) {
+// processDirectives applies directive logic to either a TableData or TableRow
+func processDirectives(directives []DocDirective, manifest *InputsManifest, data *TableData, row *TableRow) {
+	for _, attr := range directives {
+		if (attr.Parsed.Flags & IsInvalid) != 0 {
+			continue
+		}
+
+		rowAttr := TableRowAttribute{
+			Name:    attr.Parsed.First,
+			Content: attr.Parsed.Second,
+		}
+
+		switch attr.Parsed.Type {
+		case DirExample:
+			if data != nil {
+				data.Examples = append(data.Examples, rowAttr)
+			} else if row != nil {
+				row.Examples = append(row.Examples, rowAttr)
+			}
+		case DirLink:
+			if (attr.Parsed.Flags & IsReferenceLink) != 0 {
+				manifest.ReferenceLinks[attr.Parsed.First] = attr.Parsed.Second
+			} else if (attr.Parsed.Flags & IsNamedLink) != 0 {
+				if data != nil {
+					data.Links = append(data.Links, rowAttr)
+				} else if row != nil {
+					row.Links = append(row.Links, rowAttr)
+				}
+			}
+		default:
+			caser := cases.Title(language.English)
+
+			attribute := TableRowAttribute{
+				Name:    caser.String(attr.Name),
+				Content: attr.RawContent,
+			}
+
+			if data != nil {
+				data.Attributes = append(data.Attributes, attribute)
+			} else if row != nil {
+				row.Attributes = append(row.Attributes, attribute)
+			}
+		}
+	}
+}
+
+func recordNested(group ObjectField, manifest *InputsManifest) {
 	if group.NestedDataType == nil {
 		return
 	}
@@ -83,14 +137,7 @@ func recordNested(group ObjectField, record map[string]TableData) {
 		data := newTableData()
 		data.Description = strings.Join(group.Documentation.Content, "\n")
 
-		for _, attr := range group.Documentation.Directives {
-			attribute := TableRowAttribute{
-				Name:    attr.Name,
-				Content: attr.RawContent,
-			}
-
-			data.Attributes = append(data.Attributes, attribute)
-		}
+		processDirectives(group.Documentation.Directives, manifest, &data, nil)
 
 		for _, field := range group.Fields {
 			row := TableRow{
@@ -99,6 +146,8 @@ func recordNested(group ObjectField, record map[string]TableData) {
 				DefaultValue: "",
 				Description:  strings.Join(field.Documentation.Content, "\n"),
 				Attributes:   []TableRowAttribute{},
+				Examples:     []TableRowAttribute{},
+				Links:        []TableRowAttribute{},
 			}
 
 			if field.NestedDataType != nil {
@@ -109,23 +158,16 @@ func recordNested(group ObjectField, record map[string]TableData) {
 				row.DefaultValue = *field.DefaultValue
 			}
 
-			for _, attr := range field.Documentation.Directives {
-				attribute := TableRowAttribute{
-					Name:    attr.Name,
-					Content: attr.RawContent,
-				}
-
-				row.Attributes = append(row.Attributes, attribute)
-			}
+			processDirectives(field.Documentation.Directives, manifest, nil, &row)
 
 			data.Rows = append(data.Rows, row)
 		}
 
-		record[*group.NestedDataType] = data
+		manifest.NestedInputs[*group.NestedDataType] = data
 	}
 
 	for _, field := range group.Fields {
-		recordNested(field, record)
+		recordNested(field, manifest)
 	}
 }
 
@@ -152,14 +194,7 @@ func ParseModuleInputsIntoManifest(inputs []*terraform.Input) *InputsManifest {
 			Attributes:   []TableRowAttribute{},
 		}
 
-		for _, attr := range docBlk.Directives {
-			attribute := TableRowAttribute{
-				Name:    attr.Name,
-				Content: attr.RawContent,
-			}
-
-			tableRow.Attributes = append(tableRow.Attributes, attribute)
-		}
+		processDirectives(docBlk.Directives, templateData, nil, &tableRow)
 
 		if extras.ObjectField.NestedDataType != nil {
 			tableRow.Type = extras.ObjectField.DataTypeStr
@@ -172,10 +207,10 @@ func ParseModuleInputsIntoManifest(inputs []*terraform.Input) *InputsManifest {
 			templateData.OptionalInputs.Rows = append(templateData.OptionalInputs.Rows, tableRow)
 		}
 
-		recordNested(extras.ObjectField, templateData.NestedInputs)
+		recordNested(extras.ObjectField, templateData)
 
 		for _, field := range extras.ObjectField.Fields {
-			recordNested(field, templateData.NestedInputs)
+			recordNested(field, templateData)
 		}
 	}
 
