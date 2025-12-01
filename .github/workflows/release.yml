@@ -74,13 +74,15 @@ jobs:
           path: artifacts
 
       - name: Prepare release assets
+        env:
+          VERSION: ${{ github.ref_name }}
         run: |
           mkdir -p release
-          cp artifacts/tfdocs-extra-linux-amd64/tfdocs-extra release/tfdocs-extra-linux-amd64
-          cp artifacts/tfdocs-extra-linux-arm64/tfdocs-extra release/tfdocs-extra-linux-arm64
-          cp artifacts/tfdocs-extra-darwin-amd64/tfdocs-extra release/tfdocs-extra-darwin-amd64
-          cp artifacts/tfdocs-extra-darwin-arm64/tfdocs-extra release/tfdocs-extra-darwin-arm64
-          cp artifacts/tfdocs-extra-windows-amd64/tfdocs-extra.exe release/tfdocs-extra-windows-amd64.exe
+          cp artifacts/tfdocs-extra-linux-amd64/tfdocs-extra release/tfdocs-extra-${VERSION}-linux-amd64
+          cp artifacts/tfdocs-extra-linux-arm64/tfdocs-extra release/tfdocs-extra-${VERSION}-linux-arm64
+          cp artifacts/tfdocs-extra-darwin-amd64/tfdocs-extra release/tfdocs-extra-${VERSION}-darwin-amd64
+          cp artifacts/tfdocs-extra-darwin-arm64/tfdocs-extra release/tfdocs-extra-${VERSION}-darwin-arm64
+          cp artifacts/tfdocs-extra-windows-amd64/tfdocs-extra.exe release/tfdocs-extra-${VERSION}-windows-amd64.exe
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
