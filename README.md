@@ -2,385 +2,35 @@
 >
 > This library is stable enough for experimental use; however, it is not recommended for production code just yet.
 
-> [!IMPORTANT]
->
-> I am a frontend developer, and besides knowing what Terraform is, I have no experience using it. I built this library to solve a problem we have managing documentation in our FriendsOfTerraform organization.
->
-> My goal is to eventually integrate this library into [Terraform Docs](https://github.com/terraform-docs/terraform-docs) either as a plugin or built-in functionality. Considering that I barely started learning Go about a month ago, I have no idea what the best approach for integrating this library into Terraform Docs is; feedback and direction are highly appreciated.
->
-> Like everybody else, I have multiple things in my life that require my attention, so if you'd like to encourage me to work on this, here's how you can do so:
-> 
-> - Provide feedback on this library (e.g. missing features, bug reports, etc.)
-> - Star this repository / follow me on GitHub
-> - [Sponsor me on GitHub](https://github.com/sponsors/allejo)
->
-> \- [@allejo](https://github.com/allejo)
-
 # Terraform Documentation Extras (tfdocs-extras)
 
 A Go library for parsing an `object()` Terraform type definition string into a documented structure.  Support for [documenting nested objects has been a feature request dating back to April 2020](https://github.com/terraform-docs/terraform-docs/issues/242). The biggest challenge is that [Terraform Docs](https://github.com/terraform-docs/terraform-docs) does not parse the `object()` type definition itself and returns it as a raw string; this library fills that gap.
 
-After writing an [RFC for features that would be useful to the community](https://github.com/FriendsOfTerraform/modules/issues/38), this library implements the core functionality of parsing documented `object()` type definitions. This library will be used by a plugin for Terraform Docs to improve documentation generation.
+This repository houses a Go library that can parse a Terraform `object()` type definition string (including nested objects) into a structured representation that includes field names, types, optional status, default values, and parsed documentation (including support for doc directives like `@since`, `@example`, etc.). Additionally, it houses a simple CLI tool that uses this project's API for reading a Terraform variable file and outputting the parsed documentation in a GitHub-friendly Markdown format.
 
-## Installation
+## Disclaimer
+
+I am a frontend developer, and besides knowing what Terraform is, I have no experience using it. I built this library to solve a problem we have managing documentation in our [FriendsOfTerraform](https://github.com/FriendsOfTerraform) organization.
+
+The goal is to eventually integrate this library into [Terraform Docs](https://github.com/terraform-docs/terraform-docs) either as a plugin or built-in functionality. I've only recently started learning Go, so I have no idea what the best approach for integrating this library into Terraform Docs is; feedback and direction are highly appreciated.
+
+Like everybody else, I have multiple things in my life that require my attention, so if you'd like to encourage me to work on this, here's how you can do so:
+
+- Provide feedback on this library (e.g. missing features, bug reports, etc.)
+- Star this repository / follow me on GitHub
+- [Sponsor me on GitHub](https://github.com/sponsors/allejo)
+
+\- [@allejo](https://github.com/allejo)
+
+## Usage as a Go Library
+
+To integrate this library with your own tool, you can install it as a dependency via `go get`.
 
 ```bash
 go get github.com/FriendsOfTerraform/tfdocs-extras
 ```
 
-## Public API
-
-The library exposes only **one main function** and its related types:
-
-### Main Function
-
-```go
-func ParseIntoDocumentedStruct(input string, name string) (*ObjectGroup, error)
-```
-
-Parses a Terraform type definition string into a documented object group. This is the **only exported function** in the library.
-
-### Public Types
-
-These types are exported so you can work with the results:
-
-- `ObjectGroup` - The main result type containing parsed fields and metadata
-- `ObjectField` - Individual field within an object structure  
-- `VariableMetadata` - Metadata about variables (name, type, optional status, etc.)
-- `FieldDocBlock` - Parsed documentation for a field
-- `DocDirective` - Documentation directives like `@since`, `@param`, etc.
-
-## Example Usage
-
-Let's say you have the following Terraform variable definition:
-
-```terraform
-variable "network_interface" {
-  type = object({
-    /// List of security group IDs attached to this ENI
-    /// @since 1.0.0
-    security_group_ids                 = list(string)
-
-    /// Specify the subnet ID this ENI is created on
-    /// @since 1.0.0
-    subnet_id                          = string
-
-    /// Additional tags for the ENI
-    /// @since 1.0.0
-    additional_tags                    = optional(map(string), {})
-
-    /// Specify the description of the ENI
-    /// @since 1.0.0
-    description                        = optional(string)
-
-    /// Enables [elastic fabric adapter][elastic-fabric-adapter]
-    /// @since 1.0.0
-    enable_elastic_fabric_adapter      = optional(bool, false)
-
-    /// Controls if traffic is routed to the instance when the destination address does not match the instance. Used for NAT or VPNs
-    /// @since 1.0.0
-    enable_source_destination_checking = optional(bool, true)
-
-    /// Configures custom private IP addresses for the ENI.
-    /// @since 1.0.0
-    private_ip_addresses = optional(object({
-      /// List of private IPv4 addresses to assign to the ENI, the first address will be used as the primary IP address
-      /// @since 1.0.0
-      ipv4 = optional(list(string))
-    }))
-
-    /// Assigns a private CIDR range, either automatically or manually, to the ENI. By assigning [prefixes][ec2-prefixes], you scale and simplify the management of applications, including container and networking applications that require multiple IP addresses on an instance. Network interfaces with prefixes are supported with [instances built on the Nitro System][nitro-system-type].
-    /// @since 1.0.0
-    prefix_delegation = optional(object({
-      /// Configures prefix delegation for IPV4
-      /// @since 1.0.0
-      ipv4 = optional(object({
-        /// Sepcify the number of prefixes AWS chooses from your VPC subnet’s IPv4 CIDR block and assigns it to your network interface. Mutually exclusive to `custom_prefixes`
-        /// @since 1.0.0
-        auto_assign_count = optional(number)
-
-        /// Specify the prefixes from your VPC subnet’s CIDR block to assign it to your network interface. Mutually exclusive to `auto_assign_count`
-        /// @since 1.0.0
-        custom_prefixes   = optional(list(string))
-      }))
-    }))
-  })
-  description = "Configures the primary network interface"
-}
-```
-
-Terraform Docs will output the type as:
-
-```terraform
-object({
-    /// List of security group IDs attached to this ENI
-    /// @since 1.0.0
-    security_group_ids                 = list(string)
-
-    /// Specify the subnet ID this ENI is created on
-    /// @since 1.0.0
-    subnet_id                          = string
-
-    /// Additional tags for the ENI
-    /// @since 1.0.0
-    additional_tags                    = optional(map(string), {})
-
-    /// Specify the description of the ENI
-    /// @since 1.0.0
-    description                        = optional(string)
-
-    /// Enables [elastic fabric adapter][elastic-fabric-adapter]
-    /// @since 1.0.0
-    enable_elastic_fabric_adapter      = optional(bool, false)
-
-    /// Controls if traffic is routed to the instance when the destination address does not match the instance. Used for NAT or VPNs
-    /// @since 1.0.0
-    enable_source_destination_checking = optional(bool, true)
-
-    /// Configures custom private IP addresses for the ENI.
-    /// @since 1.0.0
-    private_ip_addresses = optional(object({
-      /// List of private IPv4 addresses to assign to the ENI, the first address will be used as the primary IP address
-      /// @since 1.0.0
-      ipv4 = optional(list(string))
-    }))
-
-    /// Assigns a private CIDR range, either automatically or manually, to the ENI. By assigning [prefixes][ec2-prefixes], you scale and simplify the management of applications, including container and networking applications that require multiple IP addresses on an instance. Network interfaces with prefixes are supported with [instances built on the Nitro System][nitro-system-type].
-    /// @since 1.0.0
-    prefix_delegation = optional(object({
-      /// Configures prefix delegation for IPV4
-      /// @since 1.0.0
-      ipv4 = optional(object({
-        /// Sepcify the number of prefixes AWS chooses from your VPC subnet’s IPv4 CIDR block and assigns it to your network interface. Mutually exclusive to `custom_prefixes`
-        /// @since 1.0.0
-        auto_assign_count = optional(number)
-
-        /// Specify the prefixes from your VPC subnet’s CIDR block to assign it to your network interface. Mutually exclusive to `auto_assign_count`
-        /// @since 1.0.0
-        custom_prefixes   = optional(list(string))
-      }))
-    }))
-  })
-```
-
-By calling `ParseIntoDocumentedGroup()` with the above string, you will get a structured representation of the object, including field names, types, optional status, default values, and parsed documentation.
-
-```json
-{
-  "name": "root_object",
-  "documentation": {
-    "content": [],
-    "directives": []
-  },
-  "dataType": "object(RootObject)",
-  "optional": false,
-  "fields": [
-    {
-      "name": "security_group_ids",
-      "documentation": {
-        "content": [
-          "List of security group IDs attached to this ENI"
-        ],
-        "directives": [
-          {
-            "name": "since",
-            "content": "1.0.0"
-          }
-        ]
-      },
-      "dataType": "list(string)",
-      "optional": false
-    },
-    {
-      "name": "subnet_id",
-      "documentation": {
-        "content": [
-          "Specify the subnet ID this ENI is created on"
-        ],
-        "directives": [
-          {
-            "name": "since",
-            "content": "1.0.0"
-          }
-        ]
-      },
-      "dataType": "string",
-      "optional": false
-    },
-    {
-      "name": "additional_tags",
-      "documentation": {
-        "content": [
-          "Additional tags for the ENI"
-        ],
-        "directives": [
-          {
-            "name": "since",
-            "content": "1.0.0"
-          }
-        ]
-      },
-      "dataType": "map(string)",
-      "optional": true
-    },
-    {
-      "name": "description",
-      "documentation": {
-        "content": [
-          "Specify the description of the ENI"
-        ],
-        "directives": [
-          {
-            "name": "since",
-            "content": "1.0.0"
-          }
-        ]
-      },
-      "dataType": "string",
-      "optional": true
-    },
-    {
-      "name": "enable_elastic_fabric_adapter",
-      "documentation": {
-        "content": [
-          "Enables [elastic fabric adapter][elastic-fabric-adapter]"
-        ],
-        "directives": [
-          {
-            "name": "since",
-            "content": "1.0.0"
-          }
-        ]
-      },
-      "dataType": "bool",
-      "optional": true,
-      "defaultValue": "false"
-    },
-    {
-      "name": "enable_source_destination_checking",
-      "documentation": {
-        "content": [
-          "Controls if traffic is routed to the instance when the destination address does not match the instance. Used for NAT or VPNs"
-        ],
-        "directives": [
-          {
-            "name": "since",
-            "content": "1.0.0"
-          }
-        ]
-      },
-      "dataType": "bool",
-      "optional": true,
-      "defaultValue": "true"
-    },
-    {
-      "name": "private_ip_addresses",
-      "documentation": {
-        "content": [
-          "Configures custom private IP addresses for the ENI."
-        ],
-        "directives": [
-          {
-            "name": "since",
-            "content": "1.0.0"
-          }
-        ]
-      },
-      "dataType": "object(PrivateIpAddresses)",
-      "optional": true,
-      "nestedDataType": [
-        {
-          "name": "ipv4",
-          "documentation": {
-            "content": [
-              "List of private IPv4 addresses to assign to the ENI, the first address will be used as the primary IP address"
-            ],
-            "directives": [
-              {
-                "name": "since",
-                "content": "1.0.0"
-              }
-            ]
-          },
-          "dataType": "list(string)",
-          "optional": true
-        }
-      ]
-    },
-    {
-      "name": "prefix_delegation",
-      "documentation": {
-        "content": [
-          "Assigns a private CIDR range, either automatically or manually, to the ENI. By assigning [prefixes][ec2-prefixes], you scale and simplify the management of applications, including container and networking applications that require multiple IP addresses on an instance. Network interfaces with prefixes are supported with [instances built on the Nitro System][nitro-system-type]."
-        ],
-        "directives": [
-          {
-            "name": "since",
-            "content": "1.0.0"
-          }
-        ]
-      },
-      "dataType": "object(PrefixDelegation)",
-      "optional": true,
-      "nestedDataType": [
-        {
-          "name": "ipv4",
-          "documentation": {
-            "content": [
-              "Configures prefix delegation for IPV4"
-            ],
-            "directives": [
-              {
-                "name": "since",
-                "content": "1.0.0"
-              }
-            ]
-          },
-          "dataType": "object(Ipv4)",
-          "optional": true,
-          "nestedDataType": [
-            {
-              "name": "auto_assign_count",
-              "documentation": {
-                "content": [
-                  "Sepcify the number of prefixes AWS chooses from your VPC subnet’s IPv4 CIDR block and assigns it to your network interface. Mutually exclusive to `custom_prefixes`"
-                ],
-                "directives": [
-                  {
-                    "name": "since",
-                    "content": "1.0.0"
-                  }
-                ]
-              },
-              "dataType": "number",
-              "optional": true
-            },
-            {
-              "name": "custom_prefixes",
-              "documentation": {
-                "content": [
-                  "Specify the prefixes from your VPC subnet’s CIDR block to assign it to your network interface. Mutually exclusive to `auto_assign_count`"
-                ],
-                "directives": [
-                  {
-                    "name": "since",
-                    "content": "1.0.0"
-                  }
-                ]
-              },
-              "dataType": "list(string)",
-              "optional": true
-            }
-          ]
-        }
-      ]
-    }
-  ],
-  "parentDataType": ""
-}
-```
-
-## Usage
+As this library name suggestions, this provides extra functionality on top of the Terraform Docs library. We expose a single function, `ParseModuleInputsIntoManifest()`, to parse an array of `terraform.Input` (from `terraform-docs/terraform`) into an `InputsManifest` struct that contains both the Terraform data types and parsed documentation.
 
 ```go
 package main
@@ -388,39 +38,187 @@ package main
 import (
     "encoding/json"
     "fmt"
-    "os"
 
     "github.com/FriendsOfTerraform/tfdocs-extras"
+    "github.com/terraform-docs/terraform-docs/print"
+    "github.com/terraform-docs/terraform-docs/terraform"
 )
 
 func main() {
-    input := `optional(object({
-        /// The user's name
-        /// @since 1.0.0
-        name = string
-        
-        /// The user's age
-        /// @default 18
-        age = optional(number, 18)
-        
-        /// User's address
-        address = object({
-            street = string
-            city = string
-        })
-    }))`
-    
-    documented, err := tfdocextras.ParseIntoDocumentedStruct(input, "root_object")
-    if err != nil {
-        fmt.Fprintln(os.Stderr, err)
-        os.Exit(1)
-    }
+    // Use terraform-docs to load the module
+    config := print.DefaultConfig()
+    config.ModuleRoot = "/path/to/tf-module-folder"
+    module, _ := terraform.LoadWithOptions(config)
 
-    astJSON, _ := json.MarshalIndent(documented, "", "  ")
+    // Use tfdocs-extras to parse the inputs into a documented manifest
+    manifest := tfdocextras.ParseModuleInputsIntoManifest(module.Inputs)
+
+    // Output the manifest as JSON for demonstration purposes
+    astJSON, _ := json.MarshalIndent(manifest, "", "  ")
     fmt.Printf("%s\n", astJSON)
 }
 ```
 
+## Usage as a CLI Tool
+
+This project includes a rudimentary CLI tool that reads a Terraform module folder and outputs the parsed variable documentation in Markdown format.
+
+> [!IMPORTANT]
+> 
+> This CLI tool is not intended to be a replacement for Terraform Docs and will become obsolete once its functionality is integrated into Terraform Docs either as a plugin or built-in feature.
+
+The tool accepts a single argument specifying the path to a Terraform module folder. It will read the module folder using Terraform Docs, parse the variable definitions using this library, and write the output to a `README.md` file in the module folder.
+
+```bash
+./tfdocs-extra /path/to/TerraformModules/aws/route53
+```
+
+The README requires specific markers to identify where to insert the generated documentation. The generated markdown will be inserted between the following markers:
+
+```
+<!-- TFDOCS_EXTRAS_START -->
+
+<!-- TFDOCS_EXTRAS_END -->
+```
+
+## Documentation Specification
+
+The goal of this library is to support Terraform module creators to document their nested variables inline using comments instead of needing to maintain the documentation separately. We introduce two main features:
+
+- Doc Blocks (denoted by `///` or `/** ... */`)
+- Doc Directives (denoted by `@directive-name`)
+
+Here's an example of how to document a nested object variable in Terraform:
+
+```terraform
+# variables.tf
+
+variable "access_points" {
+  type = map(object({
+    /// Configures the permissions EFS use to create the specified root
+    /// directory if the directory does not already exist
+    ///
+    /// @since 1.0.0
+    root_directory_creation_permissions = optional(object({
+      /// Owner group ID for the access point's root directory, if the directory
+      /// does not already exist. Valid value: `0 - 4294967295`
+      ///
+      /// @since 1.0.0
+      owner_group_id = number
+
+      /// Owner user ID for the access point's root directory, if the directory
+      /// does not already exist. Valid value: `0 - 4294967295`
+      ///
+      /// @since 1.0.0
+      owner_user_id = number
+    }))
+
+    /// Path on the EFS file system to expose as the root directory to NFS 
+    /// clients using the access point. A path can have up to four 
+    /// subdirectories; `root_directory_creation_permissions` must be
+    /// specified if the root path does not exist.
+    ///
+    /// @since 1.0.0
+    root_directory_path = optional(string, "/")
+  }))
+  description = <<EOT
+    Configures [access points][efs-access-point].
+
+    @link {efs-access-point} https://docs.aws.amazon.com/efs/latest/ug/efs-access-points.html
+    @example "Access Points" #access-points
+    @since 1.0.0
+  EOT
+  default = {}
+}
+```
+
+### Doc Blocks
+
+Doc blocks are multi-line comments that start with `///` or are enclosed within `/** ... */`. The triple-slash style is supported to allow for a more compact syntax and to differentiate from regular comments (i.e. `//`).
+
+```terraform
+root_directory_creation_permissions = optional(object({
+  /**
+   * Owner group ID for the access point's root directory, if the directory
+   * does not already exist. Valid value: `0 - 4294967295`
+   *
+   * @since 1.0.0
+   */
+  owner_group_id = number
+
+  /// Owner user ID for the access point's root directory, if the directory
+  /// does not already exist. Valid value: `0 - 4294967295`
+  ///
+  /// @since 1.0.0
+  owner_user_id = number
+}))
+```
+
+### Directives
+
+Directives are special annotations within doc blocks that provide additional metadata about the documented field. They start with an `@` symbol followed by the directive name and content.
+
+> [!TIP]
+> Using HEREDOC syntax for a variable's `description` attribute allows you to use `@`-directives for a top-level variable.
+
+#### `@enum`
+
+When a field can accept only a specific set of values, you can document the allowed values using the `@enum` directive. The different values are delimited by a vertical pipe (i.e. `|`); spaces around the pipe are optional.
+
+```
+@enum value1|value2|value3
+```
+
+#### `@example`
+
+The `@example` directive allows you to provide usage examples for the documented field. They will be listed alongside the field's documentation under the "Examples" section. It accepts two parameters: a title and a link (URL or anchor).
+
+```
+@example "Advanced Usage Example" #heading-id
+@example "Basic Usage Example" https://example.com/usage-example
+```
+
+#### `@link`
+
+There are two types of links you can create using the `@link` directive: named links and reference links.
+
+##### Named Links
+
+A name link allows you to create a link with a custom display name and will be displayed alongside the field's documentation in a special "Links" section.
+
+```
+@link "Some Resource Documentation" https://example.com/some/resource
+```
+
+##### Reference Links
+
+A reference link uses curly braces (i.e. `{}`) to create [link reference definitions](https://spec.commonmark.org/0.31.2/#link-reference-definition). If you create your link reference definition manually in your markdown file, you can omit the `@link` directive altogether. However, if you want to generate the link reference definitions to support [reference links](https://spec.commonmark.org/0.31.2/#full-reference-link), you can use the `@link` directive with curly braces.
+
+```
+A link to [Some Resource Documentation][resource-id].
+
+@link {resource-id} https://example.com/some/resource
+```
+
+> [!TIP]
+> Reference links are useful when you want to reuse the same link multiple times in your documentation without repeating the URL. Another use case is when the URL is long and would clutter the documentation if displayed inline.
+
+#### `@regex`
+
+The `@regex` directive allows you to specify a regular expression between `/` delimiters that the field's value must match.
+
+```
+@regex /(Average|Minimum|Maximum) (<=|<|>=|>) (\d+)/
+```
+
+#### `@since`
+
+The version when the field was introduced.
+
+```
+@since 1.0.0
+```
+
 ## License
 
-MIT
+[MIT](./LICENSE)
