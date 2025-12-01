@@ -42,7 +42,6 @@ fmt:
 
 deps:
 	$(GO) mod download
-	$(GO) mod tidy
 
 all: fmt test build
 	@echo "Build and test completed successfully!"

@@ -1,0 +1,92 @@
+name: CLI Tool Releases
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - os: linux-amd64
+            runner: ubuntu-latest
+            goos: linux
+            goarch: amd64
+          - os: linux-arm64
+            runner: ubuntu-latest
+            goos: linux
+            goarch: arm64
+          - os: darwin-amd64
+            runner: macos-13
+            goos: darwin
+            goarch: amd64
+          - os: darwin-arm64
+            runner: macos-14
+            goos: darwin
+            goarch: arm64
+          - os: windows-amd64
+            runner: windows-latest
+            goos: windows
+            goarch: amd64
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.24'
+
+      - name: Install dependencies
+        run: make deps
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          mkdir -p bin
+          go build -o bin/tfdocs-extra${{ matrix.goos == 'windows' && '.exe' || '' }} ./cmd
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: tfdocs-extra-${{ matrix.os }}
+          path: bin/tfdocs-extra${{ matrix.goos == 'windows' && '.exe' || '' }}
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v6
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release
+          cp artifacts/tfdocs-extra-linux-amd64/tfdocs-extra release/tfdocs-extra-linux-amd64
+          cp artifacts/tfdocs-extra-linux-arm64/tfdocs-extra release/tfdocs-extra-linux-arm64
+          cp artifacts/tfdocs-extra-darwin-amd64/tfdocs-extra release/tfdocs-extra-darwin-amd64
+          cp artifacts/tfdocs-extra-darwin-arm64/tfdocs-extra release/tfdocs-extra-darwin-arm64
+          cp artifacts/tfdocs-extra-windows-amd64/tfdocs-extra.exe release/tfdocs-extra-windows-amd64.exe
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          draft: true
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

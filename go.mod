@@ -4,6 +4,7 @@ go 1.24.0
 
 require (
 	github.com/alecthomas/participle/v2 v2.1.4
+	github.com/go-test/deep v1.1.1
 	github.com/terraform-docs/terraform-docs v0.20.0
 	golang.org/x/text v0.29.0
 )
@@ -12,7 +13,6 @@ require (
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
-	github.com/go-test/deep v1.1.1 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hashicorp/hcl/v2 v2.22.0 // indirect
