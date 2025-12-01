@@ -21,11 +21,11 @@ jobs:
             goos: linux
             goarch: arm64
           - os: darwin-amd64
-            runner: macos-13
+            runner: macos-15-intel
             goos: darwin
             goarch: amd64
           - os: darwin-arm64
-            runner: macos-14
+            runner: macos-latest
             goos: darwin
             goarch: arm64
           - os: windows-amd64
