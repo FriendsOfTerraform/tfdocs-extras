@@ -29,6 +29,43 @@ func TestParse_SimpleFunction(t *testing.T) {
 	}
 }
 
+func TestParse_SimpleFunctionWithArrayValue(t *testing.T) {
+	input := `optional(list(string), ["GET", 'HEAD'])`
+
+	result, err := parseAst(input)
+	if err != nil {
+		t.Fatalf("parseAst failed: %v", err)
+	}
+
+	if result.Expr.Func == nil {
+		t.Fatal("Expected astFunction, got nil")
+	}
+
+	if result.Expr.Func.Name != "optional" {
+		t.Errorf("Expected astFunction name 'optional', got '%s'", result.Expr.Func.Name)
+	}
+
+	if len(result.Expr.Func.Args) != 2 {
+		t.Errorf("Expected 2 arguments, got %d", len(result.Expr.Func.Args))
+	}
+
+	if result.Expr.Func.Args[0].Func == nil || result.Expr.Func.Args[0].Func.Name != "list" {
+		t.Error("Expected list(string) as first argument")
+	}
+
+	if result.Expr.Func.Args[1].Array == nil || len(result.Expr.Func.Args[1].Array) != 2 {
+		t.Fatal("Expected array argument with 2 elements")
+	}
+
+	if result.Expr.Func.Args[1].Array[0].String == nil || *result.Expr.Func.Args[1].Array[0].String != `"GET"` {
+		t.Errorf("Expected first array element '\"GET\"', got %v", result.Expr.Func.Args[1].Array[0].String)
+	}
+
+	if result.Expr.Func.Args[1].Array[1].String == nil || *result.Expr.Func.Args[1].Array[1].String != `'HEAD'` {
+		t.Errorf("Expected second array element '\\'HEAD\\'', got %v", result.Expr.Func.Args[1].Array[1].String)
+	}
+}
+
 func TestParse_NestedFunction(t *testing.T) {
 	input := `map(AstObject({ name = string age = number }))`
 

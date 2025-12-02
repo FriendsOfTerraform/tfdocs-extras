@@ -56,11 +56,12 @@ type astDocBlock struct {
 }
 
 type astDataType struct {
-	Func      *astFunction `  @@`
-	Object    *astObject   `| @@`
-	Primitive *string      `| @Ident`
-	Number    *string      `| @Number`
-	String    *string      `| @String`
+	Func      *astFunction   `  @@`
+	Object    *astObject     `| @@`
+	Array     []*astDataType `| "[" ( @@ ( "," @@ )* )? "]"`
+	Primitive *string        `| @Ident`
+	Number    *string        `| @Number`
+	String    *string        `| @String`
 }
 
 type astObjectProperty struct {
@@ -88,10 +89,10 @@ func parseAst(str string) (*astRoot, error) {
 			{"DocBlock", `/\*\*([^*]|\*+[^*/])*\*+/`},
 			{"DocLine", `///[^\n]*`},
 			{"Comment", `#[^\n]*`},
-			{"String", `"([^"\\]|\\.)*"`},
+			{"String", `"([^"\\]|\\.)*"|'([^'\\]|\\.)*'`},
 			{"Number", `-?\d+(\.\d+)?`},
 			{"Ident", `[a-zA-Z_][a-zA-Z0-9_]*`},
-			{"Punct", `[\(\)\{\}=,]`},
+			{"Punct", `[\(\)\{\}\[\]=,]`},
 			{"Whitespace", `[ \t\r\n]+`},
 		})),
 		participle.Elide("Whitespace", "Comment"),
