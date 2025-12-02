@@ -63,7 +63,11 @@
 
 ### Required
 
-{{template "table" .RequiredInputs}}
+{{if eq (len .RequiredInputs.Rows) 0 -}}
+    _No required inputs._
+{{else}}
+    {{- template "table" .RequiredInputs}}
+{{end}}
 
 ### Optional
 
