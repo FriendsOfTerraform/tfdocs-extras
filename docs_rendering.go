@@ -90,8 +90,8 @@ func processDirectives(directives []DocDirective, manifest *InputsManifest, data
 		}
 
 		rowAttr := TableRowAttribute{
-			Name:    attr.Parsed.First,
-			Content: attr.Parsed.Second,
+			Name:    attr.Parsed.Args[0],
+			Content: attr.Parsed.Args[1],
 		}
 
 		switch attr.Parsed.Type {
@@ -103,7 +103,7 @@ func processDirectives(directives []DocDirective, manifest *InputsManifest, data
 			}
 		case DirLink:
 			if (attr.Parsed.Flags & IsReferenceLink) != 0 {
-				manifest.ReferenceLinks[attr.Parsed.First] = attr.Parsed.Second
+				manifest.ReferenceLinks[attr.Parsed.Args[0]] = attr.Parsed.Args[1]
 			} else if (attr.Parsed.Flags & IsNamedLink) != 0 {
 				if data != nil {
 					data.Links = append(data.Links, rowAttr)

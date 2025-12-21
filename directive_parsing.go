@@ -6,8 +6,9 @@ import (
 )
 
 var (
-	quoteAndUrlPattern = regexp.MustCompile(`^"([^"]+)"\s+(.+)$`)
-	braceAndUrlPattern = regexp.MustCompile(`^\{([^}]+)}\s+(.+)$`)
+	quoteAndUrlRe   = regexp.MustCompile(`^"([^"]+)"\s+(.+)$`)
+	braceAndUrlRe   = regexp.MustCompile(`^\{([^}]+)}\s+(.+)$`)
+	enumDelimiterRe = regexp.MustCompile(`\s*\|\s*`)
 )
 
 type DirectiveType int
@@ -16,6 +17,7 @@ const (
 	DirUnsupported DirectiveType = iota
 	DirDeprecated
 	DirExample
+	DirEnum
 	DirLink
 	DirRegex
 	DirSee
@@ -30,10 +32,9 @@ const (
 )
 
 type ParsedDirective struct {
-	Type   DirectiveType
-	First  string
-	Second string
-	Flags  byte
+	Type  DirectiveType
+	Args  []string
+	Flags byte
 }
 
 func ParseDirective(name string, line string) ParsedDirective {
@@ -42,6 +43,8 @@ func ParseDirective(name string, line string) ParsedDirective {
 	switch name {
 	case "link":
 		return parseLinkDirective(line)
+	case "enum":
+		return parseEnumDirective(line)
 	case "example":
 		return parseExampleDirective(line)
 	case "regex":
@@ -59,54 +62,59 @@ func ParseDirective(name string, line string) ParsedDirective {
 
 func newBasicDirective(dt DirectiveType, content string) ParsedDirective {
 	return ParsedDirective{
-		Type:   dt,
-		First:  content,
-		Second: "",
-		Flags:  IsValid,
+		Type:  dt,
+		Args:  []string{content},
+		Flags: IsValid,
 	}
 }
 
 func newInvalidDirective(dt DirectiveType) ParsedDirective {
 	return ParsedDirective{
-		Type:   dt,
-		First:  "",
-		Second: "",
-		Flags:  IsInvalid,
+		Type:  dt,
+		Args:  []string{},
+		Flags: IsInvalid,
 	}
 }
 
 func parseExampleDirective(line string) ParsedDirective {
-	if matches := quoteAndUrlPattern.FindStringSubmatch(line); len(matches) == 3 {
+	if matches := quoteAndUrlRe.FindStringSubmatch(line); len(matches) == 3 {
 		return ParsedDirective{
-			Type:   DirExample,
-			First:  matches[1],
-			Second: matches[2],
-			Flags:  IsValid,
+			Type:  DirExample,
+			Args:  matches[1:],
+			Flags: IsValid,
 		}
 	}
 
 	return newInvalidDirective(DirExample)
 }
 
+func parseEnumDirective(line string) ParsedDirective {
+	choices := enumDelimiterRe.Split(line, -1)
+
+	return ParsedDirective{
+		Type:  DirEnum,
+		Args:  choices,
+		Flags: IsValid,
+	}
+}
+
 func parseLinkDirective(line string) ParsedDirective {
 	if strings.HasPrefix(line, "\"") {
-		if matches := quoteAndUrlPattern.FindStringSubmatch(line); len(matches) == 3 {
+		if matches := quoteAndUrlRe.FindStringSubmatch(line); len(matches) == 3 {
 			return ParsedDirective{
-				Type:   DirLink,
-				First:  matches[1],
-				Second: matches[2],
-				Flags:  IsValid | IsNamedLink,
+				Type:  DirLink,
+				Args:  matches[1:],
+				Flags: IsValid | IsNamedLink,
 			}
 		}
 	}
 
 	if strings.HasPrefix(line, "{") {
-		if matches := braceAndUrlPattern.FindStringSubmatch(line); len(matches) == 3 {
+		if matches := braceAndUrlRe.FindStringSubmatch(line); len(matches) == 3 {
 			return ParsedDirective{
-				Type:   DirLink,
-				First:  matches[1],
-				Second: matches[2],
-				Flags:  IsValid | IsReferenceLink,
+				Type:  DirLink,
+				Args:  matches[1:],
+				Flags: IsValid | IsReferenceLink,
 			}
 		}
 	}
@@ -120,10 +128,9 @@ func parseRegexDirective(line string) ParsedDirective {
 
 		if _, err := regexp.Compile(pattern); err == nil {
 			return ParsedDirective{
-				Type:   DirRegex,
-				First:  pattern,
-				Second: "",
-				Flags:  IsValid,
+				Type:  DirRegex,
+				Args:  []string{pattern},
+				Flags: IsValid,
 			}
 		}
 	}

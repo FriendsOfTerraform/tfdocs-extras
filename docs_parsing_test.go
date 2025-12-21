@@ -47,8 +47,8 @@ func TestParseDocBlock_WithLineComments(t *testing.T) {
 	}
 
 	expectedDirectives := []DocDirective{
-		{Name: "since", RawContent: "1.0.0", Parsed: ParsedDirective{Type: DirSince, First: "1.0.0", Flags: IsValid}},
-		{Name: "param", RawContent: "name The name parameter", Parsed: ParsedDirective{Type: DirUnsupported, Flags: IsInvalid}},
+		{Name: "since", RawContent: "1.0.0", Parsed: ParsedDirective{Type: DirSince, Args: []string{"1.0.0"}, Flags: IsValid}},
+		{Name: "param", RawContent: "name The name parameter", Parsed: ParsedDirective{Type: DirUnsupported, Args: []string{}, Flags: IsInvalid}},
 	}
 
 	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {
@@ -80,8 +80,8 @@ func TestParseDocBlock_WithBlockComment(t *testing.T) {
 	}
 
 	expectedDirectives := []DocDirective{
-		{Name: "deprecated", RawContent: "Use new function", Parsed: ParsedDirective{Type: DirDeprecated, First: "Use new function", Flags: IsValid}},
-		{Name: "since", RawContent: "2.0.0", Parsed: ParsedDirective{Type: DirSince, First: "2.0.0", Flags: IsValid}},
+		{Name: "deprecated", RawContent: "Use new function", Parsed: ParsedDirective{Type: DirDeprecated, Args: []string{"Use new function"}, Flags: IsValid}},
+		{Name: "since", RawContent: "2.0.0", Parsed: ParsedDirective{Type: DirSince, Args: []string{"2.0.0"}, Flags: IsValid}},
 	}
 
 	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {
@@ -94,9 +94,9 @@ func TestParseDocBlock_MixedContent(t *testing.T) {
 		astDocString("  Leading whitespace should be trimmed  "),
 		astDocString(""),
 		astDocString("Empty lines are preserved"),
-		astDocString("@example some code example"),
+		astDocString("@example \"My Example\" #my-example"),
 		astDocString("More content after directive"),
-		astDocString("@returns boolean value"),
+		astDocString("@since 1.0.0"),
 	}
 
 	block := astDocBlock{
@@ -119,8 +119,8 @@ func TestParseDocBlock_MixedContent(t *testing.T) {
 	}
 
 	expectedDirectives := []DocDirective{
-		{Name: "example", RawContent: "some code example", Parsed: ParsedDirective{Type: DirExample, Flags: IsInvalid}},
-		{Name: "returns", RawContent: "boolean value", Parsed: ParsedDirective{Type: DirUnsupported, Flags: IsInvalid}},
+		{Name: "example", RawContent: "\"My Example\" #my-example", Parsed: ParsedDirective{Type: DirExample, Args: []string{"My Example", "#my-example"}, Flags: IsValid}},
+		{Name: "since", RawContent: "1.0.0", Parsed: ParsedDirective{Type: DirSince, Args: []string{"1.0.0"}, Flags: IsValid}},
 	}
 
 	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {
@@ -150,9 +150,9 @@ func TestParseDocBlock_DirectiveWithoutContent(t *testing.T) {
 
 	// Check directives without content
 	expectedDirectives := []DocDirective{
-		{Name: "deprecated", RawContent: "", Parsed: ParsedDirective{Type: DirDeprecated, First: "", Flags: IsValid}},
-		{Name: "internal", RawContent: "", Parsed: ParsedDirective{Type: DirUnsupported, Flags: IsInvalid}},
-		{Name: "final", RawContent: "", Parsed: ParsedDirective{Type: DirUnsupported, Flags: IsInvalid}},
+		{Name: "deprecated", RawContent: "", Parsed: ParsedDirective{Type: DirDeprecated, Args: []string{""}, Flags: IsValid}},
+		{Name: "internal", RawContent: "", Parsed: ParsedDirective{Type: DirUnsupported, Args: []string{}, Flags: IsInvalid}},
+		{Name: "final", RawContent: "", Parsed: ParsedDirective{Type: DirUnsupported, Args: []string{}, Flags: IsInvalid}},
 	}
 
 	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {
@@ -180,9 +180,9 @@ func TestParseDocBlock_OnlyDirectives(t *testing.T) {
 	}
 
 	expectedDirectives := []DocDirective{
-		{Name: "since", RawContent: "1.0.0", Parsed: ParsedDirective{Type: DirSince, First: "1.0.0", Flags: IsValid}},
-		{Name: "author", RawContent: "John Doe", Parsed: ParsedDirective{Type: DirUnsupported, Flags: IsInvalid}},
-		{Name: "version", RawContent: "2.1.0", Parsed: ParsedDirective{Type: DirUnsupported, Flags: IsInvalid}},
+		{Name: "since", RawContent: "1.0.0", Parsed: ParsedDirective{Type: DirSince, Args: []string{"1.0.0"}, Flags: IsValid}},
+		{Name: "author", RawContent: "John Doe", Parsed: ParsedDirective{Type: DirUnsupported, Args: []string{}, Flags: IsInvalid}},
+		{Name: "version", RawContent: "2.1.0", Parsed: ParsedDirective{Type: DirUnsupported, Args: []string{}, Flags: IsInvalid}},
 	}
 
 	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {
@@ -267,10 +267,10 @@ func TestParseDocBlock_ComplexDirective(t *testing.T) {
 	}
 
 	expectedDirectives := []DocDirective{
-		{Name: "param", RawContent: "name string The user's name", Parsed: ParsedDirective{Type: DirUnsupported, Flags: IsInvalid}},
-		{Name: "param", RawContent: "age number The user's age in years", Parsed: ParsedDirective{Type: DirUnsupported, Flags: IsInvalid}},
-		{Name: "returns", RawContent: "{user: User} The created user object", Parsed: ParsedDirective{Type: DirUnsupported, Flags: IsInvalid}},
-		{Name: "throws", RawContent: "{ValidationError} When validation fails", Parsed: ParsedDirective{Type: DirUnsupported, Flags: IsInvalid}},
+		{Name: "param", RawContent: "name string The user's name", Parsed: ParsedDirective{Type: DirUnsupported, Args: []string{}, Flags: IsInvalid}},
+		{Name: "param", RawContent: "age number The user's age in years", Parsed: ParsedDirective{Type: DirUnsupported, Args: []string{}, Flags: IsInvalid}},
+		{Name: "returns", RawContent: "{user: User} The created user object", Parsed: ParsedDirective{Type: DirUnsupported, Args: []string{}, Flags: IsInvalid}},
+		{Name: "throws", RawContent: "{ValidationError} When validation fails", Parsed: ParsedDirective{Type: DirUnsupported, Args: []string{}, Flags: IsInvalid}},
 	}
 
 	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {
@@ -302,10 +302,10 @@ func TestParseDocBlock_EdgeCases(t *testing.T) {
 
 	// All @ lines should be parsed as directives
 	expectedDirectives := []DocDirective{
-		{Name: "", RawContent: "Invalid directive with space", Parsed: ParsedDirective{Type: DirUnsupported, Flags: IsInvalid}}, // "@ Invalid..." -> name="", content="Invalid..."
-		{Name: "", RawContent: "", Parsed: ParsedDirective{Type: DirUnsupported, Flags: IsInvalid}},                             // "@" -> name="", content=""
-		{Name: "@double", RawContent: "", Parsed: ParsedDirective{Type: DirUnsupported, Flags: IsInvalid}},                      // "@@double" -> name="@double", content=""
-		{Name: "", RawContent: "", Parsed: ParsedDirective{Type: DirUnsupported, Flags: IsInvalid}},                             // "@ " -> name="", content=""
+		{Name: "", RawContent: "Invalid directive with space", Parsed: ParsedDirective{Type: DirUnsupported, Args: []string{}, Flags: IsInvalid}}, // "@ Invalid..." -> name="", content="Invalid..."
+		{Name: "", RawContent: "", Parsed: ParsedDirective{Type: DirUnsupported, Args: []string{}, Flags: IsInvalid}},                             // "@" -> name="", content=""
+		{Name: "@double", RawContent: "", Parsed: ParsedDirective{Type: DirUnsupported, Args: []string{}, Flags: IsInvalid}},                      // "@@double" -> name="@double", content=""
+		{Name: "", RawContent: "", Parsed: ParsedDirective{Type: DirUnsupported, Args: []string{}, Flags: IsInvalid}},                             // "@ " -> name="", content=""
 	}
 
 	if diff := deep.Equal(result.Directives[:4], expectedDirectives); diff != nil {
@@ -374,8 +374,8 @@ func TestParseDocBlock_BlockWithNewlines(t *testing.T) {
 	}
 
 	expectedDirectives := []DocDirective{
-		{Name: "since", RawContent: "1.0.0", Parsed: ParsedDirective{Type: DirSince, First: "1.0.0", Flags: IsValid}},
-		{Name: "param", RawContent: "test", Parsed: ParsedDirective{Type: DirUnsupported, Flags: IsInvalid}},
+		{Name: "since", RawContent: "1.0.0", Parsed: ParsedDirective{Type: DirSince, Args: []string{"1.0.0"}, Flags: IsValid}},
+		{Name: "param", RawContent: "test", Parsed: ParsedDirective{Type: DirUnsupported, Args: []string{}, Flags: IsInvalid}},
 	}
 
 	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {
@@ -490,7 +490,7 @@ func TestParseIntoDocumentedStruct_ObjectWithDocStringComments(t *testing.T) {
 					Documentation: FieldDocBlock{
 						Content: []string{"The name of the user"},
 						Directives: []DocDirective{
-							{Name: "since", RawContent: "1.0.0", Parsed: ParsedDirective{Type: DirSince, First: "1.0.0", Flags: IsValid}},
+							{Name: "since", RawContent: "1.0.0", Parsed: ParsedDirective{Type: DirSince, Args: []string{"1.0.0"}, Flags: IsValid}},
 						},
 					},
 					DataTypeStr:  "bool",
@@ -502,7 +502,7 @@ func TestParseIntoDocumentedStruct_ObjectWithDocStringComments(t *testing.T) {
 					Documentation: FieldDocBlock{
 						Content: []string{"The age of the user"},
 						Directives: []DocDirective{
-							{Name: "since", RawContent: "1.0.0", Parsed: ParsedDirective{Type: DirSince, First: "1.0.0", Flags: IsValid}},
+							{Name: "since", RawContent: "1.0.0", Parsed: ParsedDirective{Type: DirSince, Args: []string{"1.0.0"}, Flags: IsValid}},
 						},
 					},
 					DataTypeStr:  "number",
@@ -676,7 +676,7 @@ func TestParseIntoDocumentedStruct_MapOfObjects(t *testing.T) {
 							"Specify the number of EC2 instances that should be running in the group",
 						},
 						Directives: []DocDirective{
-							{Name: "since", RawContent: "1.0.0", Parsed: ParsedDirective{Type: DirSince, First: "1.0.0", Flags: IsValid}},
+							{Name: "since", RawContent: "1.0.0", Parsed: ParsedDirective{Type: DirSince, Args: []string{"1.0.0"}, Flags: IsValid}},
 						},
 					},
 					DataTypeStr:  "number",
@@ -727,7 +727,7 @@ func TestParseIntoDocumentedStruct_ListOfObjects(t *testing.T) {
 							"The name of the server",
 						},
 						Directives: []DocDirective{
-							{Name: "required", RawContent: "true", Parsed: ParsedDirective{Type: DirUnsupported, Flags: IsInvalid}},
+							{Name: "required", RawContent: "true", Parsed: ParsedDirective{Type: DirUnsupported, Args: []string{}, Flags: IsInvalid}},
 						},
 					},
 					DataTypeStr:  "string",
@@ -742,7 +742,7 @@ func TestParseIntoDocumentedStruct_ListOfObjects(t *testing.T) {
 							"The port number for the server",
 						},
 						Directives: []DocDirective{
-							{Name: "default", RawContent: "80", Parsed: ParsedDirective{Type: DirUnsupported, Flags: IsInvalid}},
+							{Name: "default", RawContent: "80", Parsed: ParsedDirective{Type: DirUnsupported, Args: []string{}, Flags: IsInvalid}},
 						},
 					},
 					DataTypeStr:  "number",
