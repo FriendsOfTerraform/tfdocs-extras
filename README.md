@@ -205,10 +205,10 @@ A link to [Some Resource Documentation][resource-id].
 
 #### `@regex`
 
-The `@regex` directive allows you to specify a regular expression between `/` delimiters that the field's value must match.
+The `@regex` directive allows you to specify a regular expression between `/` delimiters that the field's value must match. After the pattern, you can provide example values that conform to the regex.
 
 ```
-@regex /(Average|Minimum|Maximum) (<=|<|>=|>) (\d+)/
+@regex /(Average|Minimum|Maximum) (<=|<|>=|>) (\d+)/ "Average >= 20" "Minimum < 10" "Maximum <= 100"
 ```
 
 #### `@since`
