@@ -37,6 +37,18 @@ type ParsedDirective struct {
 	Flags byte
 }
 
+func splitBySpacePreserveQuotes(s string) []string {
+	quoted := false
+
+	return strings.FieldsFunc(s, func(r rune) bool {
+		if r == '"' {
+			quoted = !quoted
+		}
+
+		return !quoted && r == ' '
+	})
+}
+
 func ParseDirective(name string, line string) ParsedDirective {
 	line = strings.TrimSpace(line)
 
@@ -123,17 +135,36 @@ func parseLinkDirective(line string) ParsedDirective {
 }
 
 func parseRegexDirective(line string) ParsedDirective {
-	if strings.HasPrefix(line, "/") && strings.HasSuffix(line, "/") {
-		pattern := line[1 : len(line)-1]
+	if !strings.HasPrefix(line, "/") {
+		return newInvalidDirective(DirRegex)
+	}
 
-		if _, err := regexp.Compile(pattern); err == nil {
-			return ParsedDirective{
-				Type:  DirRegex,
-				Args:  []string{pattern},
-				Flags: IsValid,
-			}
+	closingSlashIdx := -1
+	for i := 1; i < len(line); i++ {
+		if line[i] == '/' && (i == 1 || line[i-1] != '\\') {
+			closingSlashIdx = i
+			break
 		}
 	}
 
-	return newInvalidDirective(DirRegex)
+	if closingSlashIdx <= 0 {
+		return newInvalidDirective(DirRegex)
+	}
+
+	pattern := line[1:closingSlashIdx]
+	if _, err := regexp.Compile(pattern); err != nil {
+		return newInvalidDirective(DirRegex)
+	}
+
+	args := []string{pattern}
+	remaining := strings.TrimSpace(line[closingSlashIdx+1:])
+	if remaining != "" {
+		args = append(args, splitBySpacePreserveQuotes(remaining)...)
+	}
+
+	return ParsedDirective{
+		Type:  DirRegex,
+		Args:  args,
+		Flags: IsValid,
+	}
 }

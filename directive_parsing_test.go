@@ -103,3 +103,64 @@ func TestParseDirective_EnumDirectiveWithSpaces(t *testing.T) {
 		t.Errorf("Expected %+v, but got %+v", expected, actual)
 	}
 }
+
+func TestParseDirective_RegexDirective(t *testing.T) {
+	raw := "/^[a-zA-Z0-9_-]{5}$/ abcd4 efgh_ ijkl-"
+
+	expected := ParsedDirective{
+		Type: DirRegex,
+		Args: []string{
+			"^[a-zA-Z0-9_-]{5}$",
+			"abcd4",
+			"efgh_",
+			"ijkl-",
+		},
+		Flags: IsValid,
+	}
+
+	actual := ParseDirective("regex", raw)
+
+	if diff := deep.Equal(expected, actual); diff != nil {
+		t.Errorf("Expected %+v, but got %+v", expected, actual)
+	}
+}
+
+func TestParseDirective_RegexDirectiveWithSpaces(t *testing.T) {
+	raw := "/\\w+ \\w+/ \"hello world\" \"foo bar\""
+
+	expected := ParsedDirective{
+		Type: DirRegex,
+		Args: []string{
+			"\\w+ \\w+",
+			"\"hello world\"",
+			"\"foo bar\"",
+		},
+		Flags: IsValid,
+	}
+
+	actual := ParseDirective("regex", raw)
+
+	if diff := deep.Equal(expected, actual); diff != nil {
+		t.Errorf("Expected %+v, but got %+v", expected, actual)
+	}
+}
+
+func TestParseDirective_RegexWithSlash(t *testing.T) {
+	raw := "/^https?:\\/\\// https://example.com http://test.com"
+
+	expected := ParsedDirective{
+		Type: DirRegex,
+		Args: []string{
+			"^https?:\\/\\/",
+			"https://example.com",
+			"http://test.com",
+		},
+		Flags: IsValid,
+	}
+
+	actual := ParseDirective("regex", raw)
+
+	if diff := deep.Equal(expected, actual); diff != nil {
+		t.Errorf("Expected %+v, but got %+v", expected, actual)
+	}
+}
