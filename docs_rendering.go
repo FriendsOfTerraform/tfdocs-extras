@@ -17,12 +17,7 @@ type TableRowAttribute struct {
 	Content string `json:"content,omitempty"`
 }
 
-type TableRow struct {
-	Type          string              `json:"type,omitempty"`
-	ComplexType   *string             `json:"complex_type,omitempty"`
-	Name          string              `json:"name,omitempty"`
-	DefaultValue  string              `json:"default_value,omitempty"`
-	Description   string              `json:"description,omitempty"`
+type RowMetadata struct {
 	Attributes    []TableRowAttribute `json:"attributes,omitempty"`
 	Enumerations  []string            `json:"enumerations,omitempty"`
 	Examples      []TableRowAttribute `json:"examples,omitempty"`
@@ -31,20 +26,29 @@ type TableRow struct {
 	RegexExamples []string            `json:"regex_examples,omitempty"`
 }
 
-func (row *TableRow) GetAnchor() string {
-	if row.ComplexType == nil {
+type TableRow struct {
+	Type         string  `json:"type,omitempty"`
+	ComplexType  *string `json:"complex_type,omitempty"`
+	Name         string  `json:"name,omitempty"`
+	DefaultValue string  `json:"default_value,omitempty"`
+	Description  string  `json:"description,omitempty"`
+	RowMetadata
+}
+
+func (r *TableRow) GetAnchor() string {
+	if r.ComplexType == nil {
 		return ""
 	}
 
-	return strings.ToLower(*row.ComplexType)
+	return strings.ToLower(*r.ComplexType)
 }
 
-func (row *TableRow) GetParentType() [2]string {
-	if row.ComplexType == nil {
+func (r *TableRow) GetParentType() [2]string {
+	if r.ComplexType == nil {
 		return [2]string{"", ""}
 	}
 
-	values := strings.Split(row.Type, *row.ComplexType)
+	values := strings.Split(r.Type, *r.ComplexType)
 
 	if len(values) == 2 {
 		return [2]string{values[0], values[1]}
@@ -53,15 +57,18 @@ func (row *TableRow) GetParentType() [2]string {
 	return [2]string{"", ""}
 }
 
+func (r *TableRow) GetMetadata() *RowMetadata {
+	return &r.RowMetadata
+}
+
 type TableData struct {
-	Description   string              `json:"description"`
-	Attributes    []TableRowAttribute `json:"attributes"`
-	Enumerations  []string            `json:"enumerations,omitempty"`
-	Examples      []TableRowAttribute `json:"examples,omitempty"`
-	Links         []TableRowAttribute `json:"links,omitempty"`
-	RegexPattern  string              `json:"regex_pattern,omitempty"`
-	RegexExamples []string            `json:"regex_examples,omitempty"`
-	Rows          []TableRow          `json:"rows,omitempty"`
+	Description string     `json:"description"`
+	Rows        []TableRow `json:"rows,omitempty"`
+	RowMetadata
+}
+
+func (d *TableData) GetMetadata() *RowMetadata {
+	return &d.RowMetadata
 }
 
 type InputsManifest struct {
@@ -74,8 +81,32 @@ type InputsManifest struct {
 func newTableData() TableData {
 	return TableData{
 		Description: "",
-		Attributes:  []TableRowAttribute{},
-		Rows:        []TableRow{},
+		RowMetadata: RowMetadata{
+			Attributes:    []TableRowAttribute{},
+			Enumerations:  []string{},
+			Examples:      []TableRowAttribute{},
+			Links:         []TableRowAttribute{},
+			RegexPattern:  "",
+			RegexExamples: []string{},
+		},
+		Rows: []TableRow{},
+	}
+}
+
+func newTableRow(typeStr, name, defaultValue, description string) TableRow {
+	return TableRow{
+		Type:         typeStr,
+		Name:         name,
+		DefaultValue: defaultValue,
+		Description:  description,
+		RowMetadata: RowMetadata{
+			Attributes:    []TableRowAttribute{},
+			Enumerations:  []string{},
+			Examples:      []TableRowAttribute{},
+			Links:         []TableRowAttribute{},
+			RegexPattern:  "",
+			RegexExamples: []string{},
+		},
 	}
 }
 
@@ -88,74 +119,62 @@ func newTemplateData() *InputsManifest {
 	}
 }
 
-// processDirectives applies directive logic to either a TableData or TableRow
 func processDirectives(directives []DocDirective, manifest *InputsManifest, data *TableData, row *TableRow) {
+	var metadata *RowMetadata
+
+	if data != nil {
+		metadata = data.GetMetadata()
+	} else if row != nil {
+		metadata = row.GetMetadata()
+	}
+
+	if metadata == nil {
+		return
+	}
+
 	for _, attr := range directives {
 		if (attr.Parsed.Flags & IsInvalid) != 0 {
 			continue
 		}
 
-		rowAttr := TableRowAttribute{
-			Name:    attr.Parsed.Args[0],
-			Content: "",
-		}
-
-		if len(attr.Parsed.Args) > 1 {
-			rowAttr.Content = attr.Parsed.Args[1]
-		}
-
 		switch attr.Parsed.Type {
 		case DirEnum:
-			if data != nil {
-				data.Enumerations = append(data.Enumerations, attr.Parsed.Args...)
-			} else if row != nil {
-				row.Enumerations = append(row.Enumerations, attr.Parsed.Args...)
-			}
-			break
+			metadata.Enumerations = append(metadata.Enumerations, attr.Parsed.Args...)
 		case DirExample:
-			if data != nil {
-				data.Examples = append(data.Examples, rowAttr)
-			} else if row != nil {
-				row.Examples = append(row.Examples, rowAttr)
-			}
-			break
+			metadata.Examples = append(metadata.Examples, TableRowAttribute{
+				Name:    attr.Parsed.Args[0],
+				Content: getArgOrDefault(attr.Parsed.Args, 1),
+			})
 		case DirLink:
 			if (attr.Parsed.Flags & IsReferenceLink) != 0 {
 				manifest.ReferenceLinks[attr.Parsed.Args[0]] = attr.Parsed.Args[1]
 			} else if (attr.Parsed.Flags & IsNamedLink) != 0 {
-				if data != nil {
-					data.Links = append(data.Links, rowAttr)
-				} else if row != nil {
-					row.Links = append(row.Links, rowAttr)
-				}
+				metadata.Links = append(metadata.Links, TableRowAttribute{
+					Name:    attr.Parsed.Args[0],
+					Content: getArgOrDefault(attr.Parsed.Args, 1),
+				})
 			}
-			break
 		case DirRegex:
 			if len(attr.Parsed.Args) >= 1 {
-				if data != nil {
-					data.RegexPattern = attr.Parsed.Args[0]
-					data.RegexExamples = attr.Parsed.Args[1:]
-				} else {
-					row.RegexPattern = attr.Parsed.Args[0]
-					row.RegexExamples = attr.Parsed.Args[1:]
-				}
+				metadata.RegexPattern = attr.Parsed.Args[0]
+				metadata.RegexExamples = append(metadata.RegexExamples, attr.Parsed.Args[1:]...)
 			}
-			break
 		default:
 			caser := cases.Title(language.English)
-
-			attribute := TableRowAttribute{
+			metadata.Attributes = append(metadata.Attributes, TableRowAttribute{
 				Name:    caser.String(attr.Name),
 				Content: attr.RawContent,
-			}
-
-			if data != nil {
-				data.Attributes = append(data.Attributes, attribute)
-			} else if row != nil {
-				row.Attributes = append(row.Attributes, attribute)
-			}
+			})
 		}
 	}
+}
+
+func getArgOrDefault(args []string, index int) string {
+	if len(args) > index {
+		return args[index]
+	}
+
+	return ""
 }
 
 func recordNested(group ObjectField, manifest *InputsManifest) {
@@ -170,25 +189,16 @@ func recordNested(group ObjectField, manifest *InputsManifest) {
 		processDirectives(group.Documentation.Directives, manifest, &data, nil)
 
 		for _, field := range group.Fields {
-			row := TableRow{
-				Type:          field.DataTypeStr,
-				Name:          field.Name,
-				DefaultValue:  "",
-				Description:   strings.Join(field.Documentation.Content, "\n"),
-				Attributes:    []TableRowAttribute{},
-				Enumerations:  []string{},
-				Examples:      []TableRowAttribute{},
-				Links:         []TableRowAttribute{},
-				RegexPattern:  "",
-				RegexExamples: []string{},
+			defaultValue := ""
+
+			if field.DefaultValue != nil {
+				defaultValue = *field.DefaultValue
 			}
+
+			row := newTableRow(field.DataTypeStr, field.Name, defaultValue, strings.Join(field.Documentation.Content, "\n"))
 
 			if field.NestedDataType != nil {
 				row.ComplexType = field.NestedDataType
-			}
-
-			if field.DefaultValue != nil {
-				row.DefaultValue = *field.DefaultValue
 			}
 
 			processDirectives(field.Documentation.Directives, manifest, nil, &row)
@@ -218,19 +228,7 @@ func ParseModuleInputsIntoManifest(inputs []*terraform.Input) *InputsManifest {
 		}
 
 		docBlk := parseStringIntoDocBlock(string(input.Description))
-
-		tableRow := TableRow{
-			Type:          string(input.Type),
-			Name:          input.Name,
-			DefaultValue:  input.GetValue(),
-			Description:   strings.Join(docBlk.Content, "\n"),
-			Attributes:    []TableRowAttribute{},
-			Enumerations:  []string{},
-			Examples:      []TableRowAttribute{},
-			Links:         []TableRowAttribute{},
-			RegexPattern:  "",
-			RegexExamples: []string{},
-		}
+		tableRow := newTableRow(string(input.Type), input.Name, input.GetValue(), strings.Join(docBlk.Content, "\n"))
 
 		processDirectives(docBlk.Directives, templateData, nil, &tableRow)
 
