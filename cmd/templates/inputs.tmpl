@@ -3,6 +3,31 @@
         {{- .Description}}
     {{- end}}
 
+    {{if .Enumerations}}
+        {{- indent 0 ""}}**Allowed Values:**
+
+        {{- range .Enumerations}}
+            {{- indent 0 ""}}- `{{.}}`
+        {{- end}}
+    {{- end}}
+
+    {{if .RegexPattern}}
+        {{- indent 0 ""}}**Regex Pattern:**
+
+        {{- indent 0 ""}}```
+        {{- indent 0 ""}}{{.RegexPattern}}
+        {{- indent 0 ""}}```
+
+
+        {{if (gt (.RegexExamples | len) 0)}}
+            {{- indent 0 ""}}Example Matches:
+
+            {{- range .RegexExamples}}
+                {{- indent 0 ""}}- `{{.}}`
+            {{- end}}
+        {{- end}}
+    {{- end}}
+
     {{if .Examples}}
         {{- indent 0 ""}}**Examples:**
 

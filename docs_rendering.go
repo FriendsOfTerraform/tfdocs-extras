@@ -18,14 +18,17 @@ type TableRowAttribute struct {
 }
 
 type TableRow struct {
-	Type         string              `json:"type,omitempty"`
-	ComplexType  *string             `json:"complex_type,omitempty"`
-	Name         string              `json:"name,omitempty"`
-	DefaultValue string              `json:"default_value,omitempty"`
-	Description  string              `json:"description,omitempty"`
-	Attributes   []TableRowAttribute `json:"attributes,omitempty"`
-	Examples     []TableRowAttribute `json:"examples,omitempty"`
-	Links        []TableRowAttribute `json:"links,omitempty"`
+	Type          string              `json:"type,omitempty"`
+	ComplexType   *string             `json:"complex_type,omitempty"`
+	Name          string              `json:"name,omitempty"`
+	DefaultValue  string              `json:"default_value,omitempty"`
+	Description   string              `json:"description,omitempty"`
+	Attributes    []TableRowAttribute `json:"attributes,omitempty"`
+	Enumerations  []string            `json:"enumerations,omitempty"`
+	Examples      []TableRowAttribute `json:"examples,omitempty"`
+	Links         []TableRowAttribute `json:"links,omitempty"`
+	RegexPattern  string              `json:"regex_pattern,omitempty"`
+	RegexExamples []string            `json:"regex_examples,omitempty"`
 }
 
 func (row *TableRow) GetAnchor() string {
@@ -51,11 +54,14 @@ func (row *TableRow) GetParentType() [2]string {
 }
 
 type TableData struct {
-	Description string              `json:"description"`
-	Attributes  []TableRowAttribute `json:"attributes"`
-	Examples    []TableRowAttribute `json:"examples,omitempty"`
-	Links       []TableRowAttribute `json:"links,omitempty"`
-	Rows        []TableRow          `json:"rows,omitempty"`
+	Description   string              `json:"description"`
+	Attributes    []TableRowAttribute `json:"attributes"`
+	Enumerations  []string            `json:"enumerations,omitempty"`
+	Examples      []TableRowAttribute `json:"examples,omitempty"`
+	Links         []TableRowAttribute `json:"links,omitempty"`
+	RegexPattern  string              `json:"regex_pattern,omitempty"`
+	RegexExamples []string            `json:"regex_examples,omitempty"`
+	Rows          []TableRow          `json:"rows,omitempty"`
 }
 
 type InputsManifest struct {
@@ -91,16 +97,28 @@ func processDirectives(directives []DocDirective, manifest *InputsManifest, data
 
 		rowAttr := TableRowAttribute{
 			Name:    attr.Parsed.Args[0],
-			Content: attr.Parsed.Args[1],
+			Content: "",
+		}
+
+		if len(attr.Parsed.Args) > 1 {
+			rowAttr.Content = attr.Parsed.Args[1]
 		}
 
 		switch attr.Parsed.Type {
+		case DirEnum:
+			if data != nil {
+				data.Enumerations = append(data.Enumerations, attr.Parsed.Args...)
+			} else if row != nil {
+				row.Enumerations = append(row.Enumerations, attr.Parsed.Args...)
+			}
+			break
 		case DirExample:
 			if data != nil {
 				data.Examples = append(data.Examples, rowAttr)
 			} else if row != nil {
 				row.Examples = append(row.Examples, rowAttr)
 			}
+			break
 		case DirLink:
 			if (attr.Parsed.Flags & IsReferenceLink) != 0 {
 				manifest.ReferenceLinks[attr.Parsed.Args[0]] = attr.Parsed.Args[1]
@@ -111,6 +129,18 @@ func processDirectives(directives []DocDirective, manifest *InputsManifest, data
 					row.Links = append(row.Links, rowAttr)
 				}
 			}
+			break
+		case DirRegex:
+			if len(attr.Parsed.Args) >= 1 {
+				if data != nil {
+					data.RegexPattern = attr.Parsed.Args[0]
+					data.RegexExamples = attr.Parsed.Args[1:]
+				} else {
+					row.RegexPattern = attr.Parsed.Args[0]
+					row.RegexExamples = attr.Parsed.Args[1:]
+				}
+			}
+			break
 		default:
 			caser := cases.Title(language.English)
 
@@ -141,13 +171,16 @@ func recordNested(group ObjectField, manifest *InputsManifest) {
 
 		for _, field := range group.Fields {
 			row := TableRow{
-				Type:         field.DataTypeStr,
-				Name:         field.Name,
-				DefaultValue: "",
-				Description:  strings.Join(field.Documentation.Content, "\n"),
-				Attributes:   []TableRowAttribute{},
-				Examples:     []TableRowAttribute{},
-				Links:        []TableRowAttribute{},
+				Type:          field.DataTypeStr,
+				Name:          field.Name,
+				DefaultValue:  "",
+				Description:   strings.Join(field.Documentation.Content, "\n"),
+				Attributes:    []TableRowAttribute{},
+				Enumerations:  []string{},
+				Examples:      []TableRowAttribute{},
+				Links:         []TableRowAttribute{},
+				RegexPattern:  "",
+				RegexExamples: []string{},
 			}
 
 			if field.NestedDataType != nil {
@@ -187,11 +220,16 @@ func ParseModuleInputsIntoManifest(inputs []*terraform.Input) *InputsManifest {
 		docBlk := parseStringIntoDocBlock(string(input.Description))
 
 		tableRow := TableRow{
-			Type:         string(input.Type),
-			Name:         input.Name,
-			DefaultValue: input.GetValue(),
-			Description:  strings.Join(docBlk.Content, "\n"),
-			Attributes:   []TableRowAttribute{},
+			Type:          string(input.Type),
+			Name:          input.Name,
+			DefaultValue:  input.GetValue(),
+			Description:   strings.Join(docBlk.Content, "\n"),
+			Attributes:    []TableRowAttribute{},
+			Enumerations:  []string{},
+			Examples:      []TableRowAttribute{},
+			Links:         []TableRowAttribute{},
+			RegexPattern:  "",
+			RegexExamples: []string{},
 		}
 
 		processDirectives(docBlk.Directives, templateData, nil, &tableRow)
