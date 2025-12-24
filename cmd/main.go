@@ -18,6 +18,46 @@ import (
 //go:embed templates/inputs.tmpl
 var inputsTmplContent embed.FS
 
+const ExtrasMarkerStart = "<!-- TFDOCS_EXTRAS_START -->"
+const ExtrasMarkerEnd = "<!-- TFDOCS_EXTRAS_END -->"
+
+// ReplaceContentBetweenMarkers replaces content between startMarker and endMarker
+// Both markers must exist on their own lines
+func replaceContentBetweenMarkers(content, startMarker, endMarker, newContent string) string {
+	lines := strings.Split(content, "\n")
+	var result []string
+	insideMarkers := false
+	foundStart := false
+
+	for _, line := range lines {
+		trimmedLine := strings.TrimSpace(line)
+
+		if trimmedLine == startMarker {
+			result = append(result, line)
+			result = append(result, newContent)
+			insideMarkers = true
+			foundStart = true
+			continue
+		}
+
+		if trimmedLine == endMarker {
+			result = append(result, line)
+			insideMarkers = false
+			continue
+		}
+
+		if !insideMarkers {
+			result = append(result, line)
+		}
+	}
+
+	if !foundStart {
+		log.Fatal("Could not find start marker in README.md")
+	}
+
+	return strings.Join(result, "\n")
+}
+
 func main() {
 	modulePath := os.Args[1]
 
@@ -58,10 +98,10 @@ func main() {
 	}
 
 	// Replace content between HTML comments
-	updatedContent := tfdocextras.ReplaceContentBetweenMarkers(
+	updatedContent := replaceContentBetweenMarkers(
 		string(readmeContent),
-		tfdocextras.ExtrasMarkerStart,
-		tfdocextras.ExtrasMarkerEnd,
+		ExtrasMarkerStart,
+		ExtrasMarkerEnd,
 		templateOutput.String(),
 	)
 

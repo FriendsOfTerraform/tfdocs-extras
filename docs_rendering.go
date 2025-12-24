@@ -1,16 +1,12 @@
 package tfdocextras
 
 import (
-	"log"
 	"strings"
 
 	"github.com/terraform-docs/terraform-docs/terraform"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
-
-const ExtrasMarkerStart = "<!-- TFDOCS_EXTRAS_START -->"
-const ExtrasMarkerEnd = "<!-- TFDOCS_EXTRAS_END -->"
 
 type TableRowAttribute struct {
 	Name    string `json:"name,omitempty"`
@@ -251,41 +247,4 @@ func ParseModuleInputsIntoManifest(inputs []*terraform.Input) *InputsManifest {
 	}
 
 	return templateData
-}
-
-// ReplaceContentBetweenMarkers replaces content between startMarker and endMarker
-// Both markers must exist on their own lines
-func ReplaceContentBetweenMarkers(content, startMarker, endMarker, newContent string) string {
-	lines := strings.Split(content, "\n")
-	var result []string
-	insideMarkers := false
-	foundStart := false
-
-	for _, line := range lines {
-		trimmedLine := strings.TrimSpace(line)
-
-		if trimmedLine == startMarker {
-			result = append(result, line)
-			result = append(result, newContent)
-			insideMarkers = true
-			foundStart = true
-			continue
-		}
-
-		if trimmedLine == endMarker {
-			result = append(result, line)
-			insideMarkers = false
-			continue
-		}
-
-		if !insideMarkers {
-			result = append(result, line)
-		}
-	}
-
-	if !foundStart {
-		log.Fatal("Could not find start marker in README.md")
-	}
-
-	return strings.Join(result, "\n")
 }
