@@ -4,6 +4,9 @@
 
 # Terraform Documentation Extras (tfdocs-extras)
 
+[![GitHub Release](https://img.shields.io/github/v/release/FriendsOfTerraform/tfdocs-extras?include_prereleases)](https://github.com/FriendsOfTerraform/tfdocs-extras/releases/latest) [![GitHub License](https://img.shields.io/github/license/FriendsOfTerraform/tfdocs-extras)](/LICENSE) [![Continuous Integration](https://github.com/FriendsOfTerraform/tfdocs-extras/actions/workflows/ci.yml/badge.svg)](https://github.com/FriendsOfTerraform/tfdocs-extras/actions/workflows/ci.yml)
+
+
 A Go library for parsing an `object()` Terraform type definition string into a documented structure.  Support for [documenting nested objects has been a feature request dating back to April 2020](https://github.com/terraform-docs/terraform-docs/issues/242). The biggest challenge is that [Terraform Docs](https://github.com/terraform-docs/terraform-docs) does not parse the `object()` type definition itself and returns it as a raw string; this library fills that gap.
 
 This repository houses a Go library that can parse a Terraform `object()` type definition string (including nested objects) into a structured representation that includes field names, types, optional status, default values, and parsed documentation (including support for doc directives like `@since`, `@example`, etc.). Additionally, it houses a simple CLI tool that uses this project's API for reading a Terraform variable file and outputting the parsed documentation in a GitHub-friendly Markdown format.
@@ -62,6 +65,8 @@ func main() {
 ## Usage as a CLI Tool
 
 This project includes a rudimentary CLI tool that reads a Terraform module folder and outputs the parsed variable documentation in Markdown format.
+
+[Download from GitHub](https://github.com/FriendsOfTerraform/tfdocs-extras/releases/latest)
 
 > [!IMPORTANT]
 > 
