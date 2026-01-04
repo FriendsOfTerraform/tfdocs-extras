@@ -1,15 +1,19 @@
 > [!WARNING]
 >
-> This library is stable enough for experimental use; however, it is not recommended for production code just yet.
-
+> This library is currently in beta but stable; the API is subject to change before its first stable release. Please help us finalize the API by providing feedback in the [issues](https://github.com/FriendsOfTerraform/tfdocs-extras/issues) section or [our PR in the modules repository][fot-modules-pr].
+ 
 # Terraform Documentation Extras (tfdocs-extras)
 
 [![GitHub Release](https://img.shields.io/github/v/release/FriendsOfTerraform/tfdocs-extras?include_prereleases)](https://github.com/FriendsOfTerraform/tfdocs-extras/releases/latest) [![GitHub License](https://img.shields.io/github/license/FriendsOfTerraform/tfdocs-extras)](/LICENSE) [![Continuous Integration](https://github.com/FriendsOfTerraform/tfdocs-extras/actions/workflows/ci.yml/badge.svg)](https://github.com/FriendsOfTerraform/tfdocs-extras/actions/workflows/ci.yml)
 
-
 A Go library for parsing an `object()` Terraform type definition string into a documented structure.  Support for [documenting nested objects has been a feature request dating back to April 2020](https://github.com/terraform-docs/terraform-docs/issues/242). The biggest challenge is that [Terraform Docs](https://github.com/terraform-docs/terraform-docs) does not parse the `object()` type definition itself and returns it as a raw string; this library fills that gap.
 
 This repository houses a Go library that can parse a Terraform `object()` type definition string (including nested objects) into a structured representation that includes field names, types, optional status, default values, and parsed documentation (including support for doc directives like `@since`, `@example`, etc.). Additionally, it houses a simple CLI tool that uses this project's API for reading a Terraform variable file and outputting the parsed documentation in a GitHub-friendly Markdown format.
+
+> [!TIP]
+> See our [demo pull request using this tool][fot-modules-pr]
+
+![Markup preview in a README](./.github/screenshots/tfdocs-extras-preview.png)
 
 ## Disclaimer
 
@@ -66,7 +70,7 @@ func main() {
 
 This project includes a rudimentary CLI tool that reads a Terraform module folder and outputs the parsed variable documentation in Markdown format.
 
-[Download from GitHub](https://github.com/FriendsOfTerraform/tfdocs-extras/releases/latest)
+[Download the latest build from GitHub](https://github.com/FriendsOfTerraform/tfdocs-extras/releases/latest)
 
 > [!IMPORTANT]
 > 
@@ -87,6 +91,10 @@ The README requires specific markers to identify where to insert the generated d
 ```
 
 ## Documentation Specification
+
+> [!IMPORTANT]
+> 
+> This library is currently in beta, and this specification is subject to change before the first stable release.
 
 The goal of this library is to support Terraform module creators to document their nested variables inline using comments instead of needing to maintain the documentation separately. We introduce two main features:
 
@@ -227,3 +235,5 @@ The version when the field was introduced.
 ## License
 
 [MIT](./LICENSE)
+
+[fot-modules-pr]: https://github.com/FriendsOfTerraform/modules/pull/55
