@@ -55,7 +55,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v5
         with:
-          name: tfdocs-extra-${{ matrix.os }}
+          name: tfdocs-extras-${{ matrix.os }}
           path: bin/tfdocs-extras${{ matrix.goos == 'windows' && '.exe' || '' }}
 
   release:
