@@ -50,13 +50,13 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
         run: |
           mkdir -p bin
-          go build -o bin/tfdocs-extra${{ matrix.goos == 'windows' && '.exe' || '' }} ./cmd
+          go build -o bin/tfdocs-extras${{ matrix.goos == 'windows' && '.exe' || '' }} ./cmd
 
       - name: Upload artifact
         uses: actions/upload-artifact@v5
         with:
           name: tfdocs-extra-${{ matrix.os }}
-          path: bin/tfdocs-extra${{ matrix.goos == 'windows' && '.exe' || '' }}
+          path: bin/tfdocs-extras${{ matrix.goos == 'windows' && '.exe' || '' }}
 
   release:
     name: Create Release
@@ -78,11 +78,11 @@ jobs:
           VERSION: ${{ github.ref_name }}
         run: |
           mkdir -p release
-          cp artifacts/tfdocs-extra-linux-amd64/tfdocs-extra release/tfdocs-extra-${VERSION}-linux-amd64
-          cp artifacts/tfdocs-extra-linux-arm64/tfdocs-extra release/tfdocs-extra-${VERSION}-linux-arm64
-          cp artifacts/tfdocs-extra-darwin-amd64/tfdocs-extra release/tfdocs-extra-${VERSION}-darwin-amd64
-          cp artifacts/tfdocs-extra-darwin-arm64/tfdocs-extra release/tfdocs-extra-${VERSION}-darwin-arm64
-          cp artifacts/tfdocs-extra-windows-amd64/tfdocs-extra.exe release/tfdocs-extra-${VERSION}-windows-amd64.exe
+          cp artifacts/tfdocs-extras-linux-amd64/tfdocs-extras release/tfdocs-extras-${VERSION}-linux-amd64
+          cp artifacts/tfdocs-extras-linux-arm64/tfdocs-extras release/tfdocs-extras-${VERSION}-linux-arm64
+          cp artifacts/tfdocs-extras-darwin-amd64/tfdocs-extras release/tfdocs-extras-${VERSION}-darwin-amd64
+          cp artifacts/tfdocs-extras-darwin-arm64/tfdocs-extras release/tfdocs-extras-${VERSION}-darwin-arm64
+          cp artifacts/tfdocs-extras-windows-amd64/tfdocs-extras.exe release/tfdocs-extras-${VERSION}-windows-amd64.exe
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
