@@ -67,11 +67,13 @@ func (d *TableData) GetMetadata() *RowMetadata {
 	return &d.RowMetadata
 }
 
-type InputsManifest struct {
+type ModuleManifest struct {
 	RequiredInputs TableData            `json:"required_inputs,omitempty"`
 	OptionalInputs TableData            `json:"optional_inputs,omitempty"`
 	NestedInputs   map[string]TableData `json:"nested_inputs,omitempty"`
 	ReferenceLinks map[string]string    `json:"reference_links,omitempty"`
+	Outputs        TableData            `json:"outputs,omitempty"`
+	NestedOutputs  map[string]TableData `json:"nested_outputs,omitempty"`
 }
 
 func newTableData() TableData {
@@ -106,16 +108,18 @@ func newTableRow(typeStr, name, defaultValue, description string) TableRow {
 	}
 }
 
-func newTemplateData() *InputsManifest {
-	return &InputsManifest{
+func newTemplateData() *ModuleManifest {
+	return &ModuleManifest{
 		RequiredInputs: newTableData(),
 		OptionalInputs: newTableData(),
 		NestedInputs:   make(map[string]TableData),
 		ReferenceLinks: make(map[string]string),
+		Outputs:        newTableData(),
+		NestedOutputs:  make(map[string]TableData),
 	}
 }
 
-func processDirectives(directives []DocDirective, manifest *InputsManifest, data *TableData, row *TableRow) {
+func processDirectives(directives []DocDirective, manifest *ModuleManifest, data *TableData, row *TableRow) {
 	var metadata *RowMetadata
 
 	if data != nil {
@@ -129,7 +133,7 @@ func processDirectives(directives []DocDirective, manifest *InputsManifest, data
 	}
 
 	for _, attr := range directives {
-		if (attr.Parsed.Flags & IsInvalid) != 0 {
+		if (attr.Parsed.Flags&IsInvalid) != 0 || attr.Parsed.Type == DirType {
 			continue
 		}
 
@@ -173,7 +177,7 @@ func getArgOrDefault(args []string, index int) string {
 	return ""
 }
 
-func recordNested(group ObjectField, manifest *InputsManifest) {
+func recordNested(group ObjectField, manifest *ModuleManifest) {
 	if group.NestedDataType == nil {
 		return
 	}
@@ -210,7 +214,7 @@ func recordNested(group ObjectField, manifest *InputsManifest) {
 	}
 }
 
-func ParseModuleInputsIntoManifest(inputs []*terraform.Input) *InputsManifest {
+func ParseModuleInputsIntoManifest(inputs []*terraform.Input, outputs []*terraform.Output) *ModuleManifest {
 	templateData := newTemplateData()
 
 	for _, input := range inputs {
@@ -244,6 +248,48 @@ func ParseModuleInputsIntoManifest(inputs []*terraform.Input) *InputsManifest {
 		for _, field := range extras.ObjectField.Fields {
 			recordNested(field, templateData)
 		}
+	}
+
+	for _, output := range outputs {
+		if output.Description == "" {
+			continue
+		}
+
+		docBlk := parseStringIntoDocBlock(string(output.Description))
+		var typeDef *DocDirective
+
+		for _, directive := range docBlk.Directives {
+			if directive.Name == "type" {
+				typeDef = &directive
+			}
+		}
+
+		extras, _ := ParseIntoDocumentedStruct(typeDef.Parsed.Args[0], output.Name)
+		outputType := "unknown"
+
+		if typeDef != nil {
+			outputType = typeDef.Parsed.Args[0]
+		}
+
+		tableRow := newTableRow(outputType, output.Name, "", strings.Join(docBlk.Content, "\n"))
+
+		processDirectives(docBlk.Directives, templateData, nil, &tableRow)
+
+		if extras != nil && extras.ObjectField.NestedDataType != nil {
+			tableRow.Type = extras.ObjectField.DataTypeStr
+			tableRow.ComplexType = extras.ObjectField.NestedDataType
+		}
+
+		templateData.Outputs.Rows = append(templateData.Outputs.Rows, tableRow)
+
+		if extras != nil {
+			recordNested(extras.ObjectField, templateData)
+
+			for _, field := range extras.ObjectField.Fields {
+				recordNested(field, templateData)
+			}
+		}
+
 	}
 
 	return templateData

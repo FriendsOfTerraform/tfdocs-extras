@@ -384,6 +384,38 @@ func TestParseDocBlock_BlockWithNewlines(t *testing.T) {
 	}
 }
 
+func TestParseDocBlock_SingleLineType(t *testing.T) {
+	blockContent := astDocBlockString(strings.Replace(`
+		The ARN of the VPC
+	
+		@since 1.0.0
+		@type string
+	`, "\t", "", -1))
+	block := astDocBlock{
+		Lines: nil,
+		Block: &blockContent,
+	}
+
+	result := parseDocBlock(block)
+	expectedContent := []string{
+		"The ARN of the VPC",
+	}
+
+	if diff := deep.Equal(result.Content, expectedContent); diff != nil {
+		t.Errorf("Content mismatch:\n%v", diff)
+	}
+
+	explicitType := "string"
+	expectedDirectives := []DocDirective{
+		{Name: "since", RawContent: "1.0.0", Parsed: ParsedDirective{Type: DirSince, Args: []string{"1.0.0"}, Flags: IsValid}},
+		{Name: "type", RawContent: explicitType, Parsed: ParsedDirective{Type: DirType, Args: []string{explicitType}, Flags: IsValid}},
+	}
+
+	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {
+		t.Errorf("Directives mismatch:\n%v", diff)
+	}
+}
+
 func TestParseDocBlock_MultiLineDirective(t *testing.T) {
 	blockContent := astDocBlockString(strings.Replace(`
 		Map of default NAT gateways. The key of the map is the NAT gateway's name
