@@ -1,6 +1,7 @@
 package tfdocextras
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -376,6 +377,46 @@ func TestParseDocBlock_BlockWithNewlines(t *testing.T) {
 	expectedDirectives := []DocDirective{
 		{Name: "since", RawContent: "1.0.0", Parsed: ParsedDirective{Type: DirSince, Args: []string{"1.0.0"}, Flags: IsValid}},
 		{Name: "param", RawContent: "test", Parsed: ParsedDirective{Type: DirUnsupported, Args: []string{}, Flags: IsInvalid}},
+	}
+
+	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {
+		t.Errorf("Directives mismatch:\n%v", diff)
+	}
+}
+
+func TestParseDocBlock_MultiLineDirective(t *testing.T) {
+	blockContent := astDocBlockString(strings.Replace(`
+		Map of default NAT gateways. The key of the map is the NAT gateway's name
+	
+		@since 1.0.0
+		@type map(object({
+		  /// The availability of the NAT gateway
+		  /// @since 1.0.0
+		  availability_zone = string
+	
+		  /// The association ID of the Elastic IP address that's associated with the NAT Gateway
+		  /// @since 1.0.0
+		  association_id = string
+		}))
+	`, "\t", "", -1))
+	block := astDocBlock{
+		Lines: nil,
+		Block: &blockContent,
+	}
+
+	result := parseDocBlock(block)
+	expectedContent := []string{
+		"Map of default NAT gateways. The key of the map is the NAT gateway's name",
+	}
+
+	if diff := deep.Equal(result.Content, expectedContent); diff != nil {
+		t.Errorf("RawContent mismatch:\n%v", diff)
+	}
+
+	explicitType := "map(object({\n  /// The availability of the NAT gateway\n  /// @since 1.0.0\n  availability_zone = string\n\n  /// The association ID of the Elastic IP address that's associated with the NAT Gateway\n  /// @since 1.0.0\n  association_id = string\n}))"
+	expectedDirectives := []DocDirective{
+		{Name: "since", RawContent: "1.0.0", Parsed: ParsedDirective{Type: DirSince, Args: []string{"1.0.0"}, Flags: IsValid}},
+		{Name: "type", RawContent: explicitType, Parsed: ParsedDirective{Type: DirType, Args: []string{explicitType}, Flags: IsValid}},
 	}
 
 	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {

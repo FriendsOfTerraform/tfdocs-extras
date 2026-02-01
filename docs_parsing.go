@@ -247,34 +247,83 @@ func flattenSimpleTypes(data astDataType) *string {
 	return nil
 }
 
+func hasOpeningBracket(s string) bool {
+	return strings.Contains(s, "(") || strings.Contains(s, "{")
+}
+
+func isBracketsBalanced(lines []string) bool {
+	parenCount := 0
+	braceCount := 0
+
+	for _, line := range lines {
+		for _, ch := range line {
+			switch ch {
+			case '(':
+				parenCount++
+			case ')':
+				parenCount--
+			case '{':
+				braceCount++
+			case '}':
+				braceCount--
+			}
+		}
+	}
+
+	return parenCount == 0 && braceCount == 0
+}
+
 func parseDocBlock(block astDocBlock) FieldDocBlock {
-	lineNo := 1
 	indentation := ""
+	indentationSet := false
 	doc := FieldDocBlock{}
 
-	iterateDocLines(block, func(line string) {
-		trimmed := strings.TrimLeft(line, " \t")
+	var currentDirective *DocDirective
+	var directiveLines []string
 
-		if lineNo == 1 {
-			indentation = line[:len(line)-len(trimmed)]
+	iterateDocLines(block, func(originalLine string) {
+		trimmed := strings.TrimLeft(originalLine, " \t")
+
+		if !indentationSet && trimmed != "" {
+			indentation = originalLine[:len(originalLine)-len(trimmed)]
+			indentationSet = true
 		}
 
+		line := originalLine
 		if strings.HasPrefix(line, indentation) {
 			line = line[len(indentation):]
 		}
 
-		if strings.HasPrefix(line, "@") {
+		if currentDirective != nil {
+			directiveLines = append(directiveLines, originalLine)
+
+			if isBracketsBalanced(directiveLines) {
+				content := strings.Join(directiveLines, "\n")
+				currentDirective.RawContent = content
+				currentDirective.Parsed = ParseDirective(currentDirective.Name, content)
+				doc.Directives = append(doc.Directives, *currentDirective)
+
+				currentDirective = nil
+				directiveLines = nil
+			}
+		} else if strings.HasPrefix(line, "@") {
 			name, content, _ := strings.Cut(line[1:], " ")
-			doc.Directives = append(doc.Directives, DocDirective{
-				Name:       name,
-				Parsed:     ParseDirective(name, content),
-				RawContent: content,
-			})
+
+			if hasOpeningBracket(content) && !isBracketsBalanced([]string{content}) {
+				currentDirective = &DocDirective{
+					Name: name,
+				}
+				directiveLines = []string{content}
+			} else {
+				doc.Directives = append(doc.Directives, DocDirective{
+					Name:       name,
+					Parsed:     ParseDirective(name, content),
+					RawContent: content,
+				})
+			}
 		} else {
 			doc.Content = append(doc.Content, strings.TrimSpace(line))
 		}
-
-		lineNo++
 	})
 
 	doc.Content = trimEmptyLines(doc.Content)

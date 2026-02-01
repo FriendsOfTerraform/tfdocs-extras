@@ -22,6 +22,7 @@ const (
 	DirRegex
 	DirSee
 	DirSince
+	DirType
 )
 
 const (
@@ -61,6 +62,8 @@ func ParseDirective(name string, line string) ParsedDirective {
 		return parseExampleDirective(line)
 	case "regex":
 		return parseRegexDirective(line)
+	case "type":
+		return newBasicDirective(DirType, line)
 	case "deprecated":
 		return newBasicDirective(DirDeprecated, line)
 	case "see":
