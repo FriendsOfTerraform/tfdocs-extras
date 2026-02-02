@@ -27,6 +27,7 @@ type Argument struct {
 	ComplexType  *string `json:"complex_type,omitempty"`
 	Name         string  `json:"name,omitempty"`
 	DefaultValue *string `json:"default_value,omitempty"`
+	Required     bool    `json:"required,omitempty"`
 	Sensitive    bool    `json:"sensitive,omitempty"`
 	Description  string  `json:"description,omitempty"`
 	ArgumentMetadata
@@ -56,6 +57,14 @@ func (r *Argument) GetParentType() [2]string {
 
 func (r *Argument) GetMetadata() *ArgumentMetadata {
 	return &r.ArgumentMetadata
+}
+
+func (r *Argument) HasDefaultValue() bool {
+	if r.Sensitive || r.Required {
+		return false
+	}
+
+	return r.DefaultValue != nil
 }
 
 type ArgGroupType int
@@ -107,6 +116,7 @@ func newArgument(typeStr, name, description string) Argument {
 		Type:         typeStr,
 		Name:         name,
 		DefaultValue: nil,
+		Required:     false,
 		Sensitive:    false,
 		Description:  description,
 		ArgumentMetadata: ArgumentMetadata{
@@ -269,8 +279,9 @@ func ParseModuleArgsIntoManifest(inputs []*terraform.Input, outputs []*terraform
 		defaultValue := input.GetValue()
 		tableRow := createArgumentFromDocBlock(input.Name, string(input.Type), docBlk, extras, templateData)
 		tableRow.DefaultValue = &defaultValue
+		tableRow.Required = input.Required
 
-		if input.Required {
+		if tableRow.Required {
 			templateData.RequiredInputs.Rows = append(templateData.RequiredInputs.Rows, tableRow)
 		} else {
 			templateData.OptionalInputs.Rows = append(templateData.OptionalInputs.Rows, tableRow)

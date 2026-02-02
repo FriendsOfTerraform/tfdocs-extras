@@ -75,7 +75,7 @@
         {{- end -}}
     </td>
     <td width="100%">{{.Name}}</td>
-    <td>{{if .DefaultValue}}<code>{{.DefaultValue}}</code>{{else if .Sensitive}}Yes{{end}}</td>
+    <td>{{if .HasDefaultValue}}<code>{{.DefaultValue}}</code>{{else if .Sensitive}}Yes{{end}}</td>
 </tr>
 <tr><td colspan="3">
 
