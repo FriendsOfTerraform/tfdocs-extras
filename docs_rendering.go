@@ -27,7 +27,7 @@ type Argument struct {
 	ComplexType  *string `json:"complex_type,omitempty"`
 	Name         string  `json:"name,omitempty"`
 	DefaultValue *string `json:"default_value,omitempty"`
-	Sensitive    *bool   `json:"sensitive,omitempty"`
+	Sensitive    bool    `json:"sensitive,omitempty"`
 	Description  string  `json:"description,omitempty"`
 	ArgumentMetadata
 }
@@ -58,9 +58,19 @@ func (r *Argument) GetMetadata() *ArgumentMetadata {
 	return &r.ArgumentMetadata
 }
 
+type ArgGroupType int
+
+const (
+	Anonymous ArgGroupType = iota
+	RequiredInput
+	OptionalInput
+	Output
+)
+
 type ArgumentGroup struct {
-	Description string     `json:"description"`
-	Rows        []Argument `json:"rows,omitempty"`
+	Type        ArgGroupType `json:"-"`
+	Description string       `json:"description"`
+	Rows        []Argument   `json:"rows,omitempty"`
 	ArgumentMetadata
 }
 
@@ -76,8 +86,9 @@ type ModuleManifest struct {
 	ReferenceLinks map[string]string        `json:"reference_links,omitempty"`
 }
 
-func newArgumentGroup() ArgumentGroup {
+func newArgumentGroup(grpType ArgGroupType) ArgumentGroup {
 	return ArgumentGroup{
+		Type:        grpType,
 		Description: "",
 		ArgumentMetadata: ArgumentMetadata{
 			Attributes:    []MetadataAttribute{},
@@ -96,7 +107,7 @@ func newArgument(typeStr, name, description string) Argument {
 		Type:         typeStr,
 		Name:         name,
 		DefaultValue: nil,
-		Sensitive:    nil,
+		Sensitive:    false,
 		Description:  description,
 		ArgumentMetadata: ArgumentMetadata{
 			Attributes:    []MetadataAttribute{},
@@ -111,11 +122,11 @@ func newArgument(typeStr, name, description string) Argument {
 
 func newModuleManifest() *ModuleManifest {
 	return &ModuleManifest{
-		RequiredInputs: newArgumentGroup(),
-		OptionalInputs: newArgumentGroup(),
+		RequiredInputs: newArgumentGroup(RequiredInput),
+		OptionalInputs: newArgumentGroup(OptionalInput),
 		Objects:        make(map[string]ArgumentGroup),
 		ReferenceLinks: make(map[string]string),
-		Outputs:        newArgumentGroup(),
+		Outputs:        newArgumentGroup(Output),
 	}
 }
 
@@ -183,7 +194,7 @@ func recordNested(group StructProperty, manifest *ModuleManifest) {
 	}
 
 	if group.Properties != nil && len(group.Properties) > 0 {
-		data := newArgumentGroup()
+		data := newArgumentGroup(Anonymous)
 		data.Description = strings.Join(group.Documentation.Content, "\n")
 
 		processDirectives(group.Documentation.Directives, manifest, &data, nil)
@@ -289,7 +300,7 @@ func ParseModuleArgsIntoManifest(inputs []*terraform.Input, outputs []*terraform
 		}
 
 		tableRow := createArgumentFromDocBlock(output.Name, outputType, docBlk, extras, templateData)
-		tableRow.Sensitive = &output.Sensitive
+		tableRow.Sensitive = output.Sensitive
 		templateData.Outputs.Rows = append(templateData.Outputs.Rows, tableRow)
 
 		processStructAndNested(extras, templateData)
