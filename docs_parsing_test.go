@@ -1313,3 +1313,221 @@ func TestParseIntoDocumentedStruct_ObjectWithMapOfObjects(t *testing.T) {
 		t.Error(diff)
 	}
 }
+
+func TestHasOpeningBracket_WithoutStrings(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{"has opening paren", "map(string)", true},
+		{"has opening brace", "object({", true},
+		{"no brackets", "string", false},
+		{"only closing brackets", "test)", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := hasOpeningBracket(tt.input)
+			if result != tt.expected {
+				t.Errorf("hasOpeningBracket(%q) = %v, expected %v", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestHasOpeningBracket_WithStrings(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{
+			name:     "bracket in string should be ignored",
+			input:    `description = "use format (like this)"`,
+			expected: false,
+		},
+		{
+			name:     "bracket outside string",
+			input:    `map("test")`,
+			expected: true,
+		},
+		{
+			name:     "bracket before string",
+			input:    `map(string, "description")`,
+			expected: true,
+		},
+		{
+			name:     "escaped quote with bracket",
+			input:    `"description with \" and (bracket)"`,
+			expected: false,
+		},
+		{
+			name:     "multiple strings with brackets inside",
+			input:    `"first (test)" and "second {test}"`,
+			expected: false,
+		},
+		{
+			name:     "bracket after quoted string",
+			input:    `"test" + map(`,
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := hasOpeningBracket(tt.input)
+			if result != tt.expected {
+				t.Errorf("hasOpeningBracket(%q) = %v, expected %v", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsBracketsBalanced_SimpleTypes(t *testing.T) {
+	tests := []struct {
+		name     string
+		lines    []string
+		expected bool
+	}{
+		{
+			name:     "balanced parentheses",
+			lines:    []string{"map(string)"},
+			expected: true,
+		},
+		{
+			name:     "balanced braces",
+			lines:    []string{"object({name = string})"},
+			expected: true,
+		},
+		{
+			name:     "unbalanced opening paren",
+			lines:    []string{"map(string"},
+			expected: false,
+		},
+		{
+			name:     "unbalanced opening brace",
+			lines:    []string{"object({name = string"},
+			expected: false,
+		},
+		{
+			name:     "multiline balanced",
+			lines:    []string{"map(object({", "  name = string", "}))"},
+			expected: true,
+		},
+		{
+			name:     "multiline unbalanced",
+			lines:    []string{"map(object({", "  name = string", "})"},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isBracketsBalanced(tt.lines)
+			if result != tt.expected {
+				t.Errorf("isBracketsBalanced(%v) = %v, expected %v", tt.lines, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsBracketsBalanced_WithStringLiterals(t *testing.T) {
+	tests := []struct {
+		name     string
+		lines    []string
+		expected bool
+	}{
+		{
+			name:     "brackets in string literal should be ignored",
+			lines:    []string{`string, description = "use format (like this)"`},
+			expected: true,
+		},
+		{
+			name:     "unbalanced bracket outside string",
+			lines:    []string{`map(string, description = "test")`},
+			expected: true,
+		},
+		{
+			name:     "unbalanced in string but balanced overall",
+			lines:    []string{`map(object({ desc = "incomplete (bracket" }))`},
+			expected: true,
+		},
+		{
+			name:     "escaped quote with bracket",
+			lines:    []string{`map(string, note = "use \" and (this)"`},
+			expected: false,
+		},
+		{
+			name:     "multiple strings with brackets",
+			lines:    []string{`object({ a = "test (1)", b = "test {2}" })`},
+			expected: true,
+		},
+		{
+			name: "multiline with string containing brackets",
+			lines: []string{
+				`map(object({`,
+				`  /// Description with (parentheses)`,
+				`  name = string`,
+				`}))`,
+			},
+			expected: true,
+		},
+		{
+			name: "string spanning multiple lines would break but we only handle single line strings",
+			lines: []string{
+				`map(string`,
+				`)`,
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isBracketsBalanced(tt.lines)
+			if result != tt.expected {
+				t.Errorf("isBracketsBalanced(%v) = %v, expected %v", tt.lines, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseDocBlock_MultiLineDirectiveWithStringLiterals(t *testing.T) {
+	blockContent := astDocBlockString(`
+		Output description
+
+		@type map(object({
+		  /// Field with description "(like this)"
+		  name = string
+		  
+		  /// Another field with {curly} brackets
+		  value = number
+		}))
+	`)
+	block := astDocBlock{
+		Lines: nil,
+		Block: &blockContent,
+	}
+
+	result := parseDocBlock(block)
+
+	if len(result.Directives) != 1 {
+		t.Fatalf("Expected 1 directive, got %d", len(result.Directives))
+	}
+
+	typeDir := result.Directives[0]
+	if typeDir.Name != "type" {
+		t.Errorf("Expected directive name 'type', got '%s'", typeDir.Name)
+	}
+
+	// The directive should have captured all lines until brackets are balanced
+	// even though the comments contain brackets in strings
+	if !strings.Contains(typeDir.RawContent, "name = string") {
+		t.Error("Expected type directive to contain 'name = string'")
+	}
+
+	if !strings.Contains(typeDir.RawContent, "value = number") {
+		t.Error("Expected type directive to contain 'value = number'")
+	}
+}

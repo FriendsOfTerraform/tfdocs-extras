@@ -249,15 +249,60 @@ func flattenSimpleTypes(data astDataType) *string {
 }
 
 func hasOpeningBracket(s string) bool {
-	return strings.Contains(s, "(") || strings.Contains(s, "{")
+	inString := false
+	escaped := false
+
+	for _, ch := range s {
+		if escaped {
+			escaped = false
+			continue
+		}
+
+		if ch == '\\' {
+			escaped = true
+			continue
+		}
+
+		if ch == '"' {
+			inString = !inString
+			continue
+		}
+
+		if !inString && (ch == '(' || ch == '{') {
+			return true
+		}
+	}
+
+	return false
 }
 
 func isBracketsBalanced(lines []string) bool {
 	parenCount := 0
 	braceCount := 0
+	inString := false
+	escaped := false
 
 	for _, line := range lines {
 		for _, ch := range line {
+			if escaped {
+				escaped = false
+				continue
+			}
+
+			if ch == '\\' {
+				escaped = true
+				continue
+			}
+
+			if ch == '"' {
+				inString = !inString
+				continue
+			}
+
+			if inString {
+				continue
+			}
+
 			switch ch {
 			case '(':
 				parenCount++
@@ -296,7 +341,7 @@ func parseDocBlock(block astDocBlock) PropertyDocBlock {
 		}
 
 		if currentDirective != nil {
-			directiveLines = append(directiveLines, originalLine)
+			directiveLines = append(directiveLines, line)
 
 			if isBracketsBalanced(directiveLines) {
 				content := strings.Join(directiveLines, "\n")
