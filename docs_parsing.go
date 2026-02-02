@@ -29,7 +29,7 @@ type StructProperty struct {
 	Optional       bool             `json:"optional"`
 	DefaultValue   *string          `json:"defaultValue,omitempty"`
 	NestedDataType *string          `json:"nestedDataType,omitempty"`
-	Fields         []StructProperty `json:"fields,omitempty"`
+	Properties     []StructProperty `json:"properties,omitempty"`
 }
 
 // DocumentedStruct represents a group of related object fields with documentation
@@ -120,7 +120,7 @@ func handleObjectField(field *StructProperty, dataType astDataType) bool {
 
 func parseNestedObject(field *StructProperty, obj *astObject) {
 	objectName := getObjectName(field.Name)
-	field.Fields = parseObjectBlock(*obj)
+	field.Properties = parseObjectBlock(*obj)
 	field.DataTypeStr = "object(" + objectName + ")"
 	field.NestedDataType = &objectName
 }
@@ -173,7 +173,7 @@ func parseCollectionOfObjects(field *StructProperty, fn *astFunction) bool {
 	}
 
 	objectName := getObjectName(field.Name)
-	field.Fields = parseObjectBlock(*fn.Args[0].Func.Args[0].Object)
+	field.Properties = parseObjectBlock(*fn.Args[0].Func.Args[0].Object)
 	field.DataTypeStr = fn.Name + "(object(" + objectName + "))"
 	field.NestedDataType = &objectName
 
@@ -411,7 +411,7 @@ func parseObjectFunctionBlock(fxn astFunction, name string) *DocumentedStruct {
 
 	if len(fxn.Args) > 0 {
 		if fields := extractObjectFromArg(fxn.Args[0]); fields != nil {
-			objGroup.Fields = fields
+			objGroup.Properties = fields
 			objectName := getObjectName(name)
 			objGroup.NestedDataType = &objectName
 			objGroup.DataTypeStr = buildObjectTypeName(name, collectionPrefix)

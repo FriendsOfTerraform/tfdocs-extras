@@ -26,7 +26,8 @@ type Argument struct {
 	Type         string  `json:"type,omitempty"`
 	ComplexType  *string `json:"complex_type,omitempty"`
 	Name         string  `json:"name,omitempty"`
-	DefaultValue string  `json:"default_value,omitempty"`
+	DefaultValue *string `json:"default_value,omitempty"`
+	Sensitive    *bool   `json:"sensitive,omitempty"`
 	Description  string  `json:"description,omitempty"`
 	ArgumentMetadata
 }
@@ -90,11 +91,12 @@ func newArgumentGroup() ArgumentGroup {
 	}
 }
 
-func newArgument(typeStr, name, defaultValue, description string) Argument {
+func newArgument(typeStr, name, description string) Argument {
 	return Argument{
 		Type:         typeStr,
 		Name:         name,
-		DefaultValue: defaultValue,
+		DefaultValue: nil,
+		Sensitive:    nil,
 		Description:  description,
 		ArgumentMetadata: ArgumentMetadata{
 			Attributes:    []MetadataAttribute{},
@@ -180,20 +182,18 @@ func recordNested(group StructProperty, manifest *ModuleManifest) {
 		return
 	}
 
-	if group.Fields != nil && len(group.Fields) > 0 {
+	if group.Properties != nil && len(group.Properties) > 0 {
 		data := newArgumentGroup()
 		data.Description = strings.Join(group.Documentation.Content, "\n")
 
 		processDirectives(group.Documentation.Directives, manifest, &data, nil)
 
-		for _, field := range group.Fields {
-			defaultValue := ""
+		for _, field := range group.Properties {
+			row := newArgument(field.DataTypeStr, field.Name, strings.Join(field.Documentation.Content, "\n"))
 
 			if field.DefaultValue != nil {
-				defaultValue = *field.DefaultValue
+				row.DefaultValue = field.DefaultValue
 			}
-
-			row := newArgument(field.DataTypeStr, field.Name, defaultValue, strings.Join(field.Documentation.Content, "\n"))
 
 			if field.NestedDataType != nil {
 				row.ComplexType = field.NestedDataType
@@ -207,33 +207,61 @@ func recordNested(group StructProperty, manifest *ModuleManifest) {
 		manifest.Objects[*group.NestedDataType] = data
 	}
 
-	for _, field := range group.Fields {
+	for _, field := range group.Properties {
 		recordNested(field, manifest)
 	}
 }
 
-func ParseModuleInputsIntoManifest(inputs []*terraform.Input, outputs []*terraform.Output) *ModuleManifest {
+func processStructAndNested(extras *DocumentedStruct, manifest *ModuleManifest) {
+	if extras == nil {
+		return
+	}
+
+	recordNested(extras.StructProperty, manifest)
+
+	for _, field := range extras.StructProperty.Properties {
+		recordNested(field, manifest)
+	}
+}
+
+func createArgumentFromDocBlock(name string, typeStr string, docBlk PropertyDocBlock, extras *DocumentedStruct, manifest *ModuleManifest) Argument {
+	tableRow := newArgument(typeStr, name, strings.Join(docBlk.Content, "\n"))
+
+	processDirectives(docBlk.Directives, manifest, nil, &tableRow)
+
+	if extras != nil && extras.StructProperty.NestedDataType != nil {
+		tableRow.Type = extras.StructProperty.DataTypeStr
+		tableRow.ComplexType = extras.StructProperty.NestedDataType
+	}
+
+	return tableRow
+}
+
+func findTypeDirective(directives []DocDirective) *DocDirective {
+	for _, directive := range directives {
+		if directive.Name == "type" {
+			return &directive
+		}
+	}
+
+	return nil
+}
+
+func ParseModuleArgsIntoManifest(inputs []*terraform.Input, outputs []*terraform.Output) *ModuleManifest {
 	templateData := newModuleManifest()
 
 	for _, input := range inputs {
-		var extras DocumentedStruct
+		var extras *DocumentedStruct
 		if input.Type != "" {
-			documented, astErr := ParseIntoDocumentedStruct(string(input.Type), input.Name)
-
-			if astErr == nil && documented != nil {
-				extras = *documented
+			if documented, err := ParseIntoDocumentedStruct(string(input.Type), input.Name); err == nil && documented != nil {
+				extras = documented
 			}
 		}
 
 		docBlk := parseStringIntoDocBlock(string(input.Description))
-		tableRow := newArgument(string(input.Type), input.Name, input.GetValue(), strings.Join(docBlk.Content, "\n"))
-
-		processDirectives(docBlk.Directives, templateData, nil, &tableRow)
-
-		if extras.StructProperty.NestedDataType != nil {
-			tableRow.Type = extras.StructProperty.DataTypeStr
-			tableRow.ComplexType = extras.StructProperty.NestedDataType
-		}
+		defaultValue := input.GetValue()
+		tableRow := createArgumentFromDocBlock(input.Name, string(input.Type), docBlk, extras, templateData)
+		tableRow.DefaultValue = &defaultValue
 
 		if input.Required {
 			templateData.RequiredInputs.Rows = append(templateData.RequiredInputs.Rows, tableRow)
@@ -241,11 +269,7 @@ func ParseModuleInputsIntoManifest(inputs []*terraform.Input, outputs []*terrafo
 			templateData.OptionalInputs.Rows = append(templateData.OptionalInputs.Rows, tableRow)
 		}
 
-		recordNested(extras.StructProperty, templateData)
-
-		for _, field := range extras.StructProperty.Fields {
-			recordNested(field, templateData)
-		}
+		processStructAndNested(extras, templateData)
 	}
 
 	for _, output := range outputs {
@@ -254,40 +278,21 @@ func ParseModuleInputsIntoManifest(inputs []*terraform.Input, outputs []*terrafo
 		}
 
 		docBlk := parseStringIntoDocBlock(string(output.Description))
-		var typeDef *DocDirective
+		typeDef := findTypeDirective(docBlk.Directives)
 
-		for _, directive := range docBlk.Directives {
-			if directive.Name == "type" {
-				typeDef = &directive
-			}
-		}
-
-		extras, _ := ParseIntoDocumentedStruct(typeDef.Parsed.Args[0], output.Name)
+		var extras *DocumentedStruct
 		outputType := "unknown"
 
 		if typeDef != nil {
 			outputType = typeDef.Parsed.Args[0]
+			extras, _ = ParseIntoDocumentedStruct(outputType, output.Name)
 		}
 
-		tableRow := newArgument(outputType, output.Name, "", strings.Join(docBlk.Content, "\n"))
-
-		processDirectives(docBlk.Directives, templateData, nil, &tableRow)
-
-		if extras != nil && extras.StructProperty.NestedDataType != nil {
-			tableRow.Type = extras.StructProperty.DataTypeStr
-			tableRow.ComplexType = extras.StructProperty.NestedDataType
-		}
-
+		tableRow := createArgumentFromDocBlock(output.Name, outputType, docBlk, extras, templateData)
+		tableRow.Sensitive = &output.Sensitive
 		templateData.Outputs.Rows = append(templateData.Outputs.Rows, tableRow)
 
-		if extras != nil {
-			recordNested(extras.StructProperty, templateData)
-
-			for _, field := range extras.StructProperty.Fields {
-				recordNested(field, templateData)
-			}
-		}
-
+		processStructAndNested(extras, templateData)
 	}
 
 	return templateData

@@ -544,8 +544,8 @@ func TestParseIntoDocumentedStruct_ObjectWithDocStringComments(t *testing.T) {
 		t.Fatalf("Failed to parse: %v", err)
 	}
 
-	if len(objBlock.Fields) != 2 {
-		t.Fatalf("Expected 2 fields, got %d", len(objBlock.Fields))
+	if len(objBlock.Properties) != 2 {
+		t.Fatalf("Expected 2 fields, got %d", len(objBlock.Properties))
 	}
 
 	expected := DocumentedStruct{
@@ -557,7 +557,7 @@ func TestParseIntoDocumentedStruct_ObjectWithDocStringComments(t *testing.T) {
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
-			Fields: []StructProperty{
+			Properties: []StructProperty{
 				{
 					Name: "enable_managed_scaling_draining",
 					Documentation: PropertyDocBlock{
@@ -614,7 +614,7 @@ func TestParseIntoDocumentedStruct_OptionalObject(t *testing.T) {
 			DefaultValue:   nil,
 			DataTypeStr:    "object(TestObject)",
 			NestedDataType: strPtr("TestObject"),
-			Fields: []StructProperty{
+			Properties: []StructProperty{
 				{
 					Documentation: PropertyDocBlock{
 						Content:    []string{},
@@ -624,7 +624,7 @@ func TestParseIntoDocumentedStruct_OptionalObject(t *testing.T) {
 					DataTypeStr:  "string",
 					Optional:     false,
 					DefaultValue: nil,
-					Fields:       nil,
+					Properties:   nil,
 				},
 			},
 		},
@@ -661,7 +661,7 @@ func TestParseIntoDocumentedStruct_OptionalObjectWithObject(t *testing.T) {
 				Directives: []DocDirective{},
 			},
 			Optional: true,
-			Fields: []StructProperty{
+			Properties: []StructProperty{
 				{
 					Documentation: PropertyDocBlock{
 						Content:    []string{},
@@ -671,7 +671,7 @@ func TestParseIntoDocumentedStruct_OptionalObjectWithObject(t *testing.T) {
 					DataTypeStr:  "string",
 					Optional:     false,
 					DefaultValue: nil,
-					Fields:       nil,
+					Properties:   nil,
 				},
 				{
 					Documentation: PropertyDocBlock{
@@ -683,7 +683,7 @@ func TestParseIntoDocumentedStruct_OptionalObjectWithObject(t *testing.T) {
 					NestedDataType: strPtr("Address"),
 					Optional:       false,
 					DefaultValue:   nil,
-					Fields: []StructProperty{
+					Properties: []StructProperty{
 						{
 							Documentation: PropertyDocBlock{
 								Content:    []string{},
@@ -693,7 +693,7 @@ func TestParseIntoDocumentedStruct_OptionalObjectWithObject(t *testing.T) {
 							DataTypeStr:  "string",
 							Optional:     false,
 							DefaultValue: nil,
-							Fields:       nil,
+							Properties:   nil,
 						},
 						{
 							Documentation: PropertyDocBlock{
@@ -704,7 +704,7 @@ func TestParseIntoDocumentedStruct_OptionalObjectWithObject(t *testing.T) {
 							DataTypeStr:  "string",
 							Optional:     false,
 							DefaultValue: nil,
-							Fields:       nil,
+							Properties:   nil,
 						},
 					},
 				},
@@ -741,7 +741,7 @@ func TestParseIntoDocumentedStruct_MapOfObjects(t *testing.T) {
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
-			Fields: []StructProperty{
+			Properties: []StructProperty{
 				{
 					Name: "desired_instances",
 					Documentation: PropertyDocBlock{
@@ -755,7 +755,7 @@ func TestParseIntoDocumentedStruct_MapOfObjects(t *testing.T) {
 					DataTypeStr:  "number",
 					Optional:     false,
 					DefaultValue: nil,
-					Fields:       nil,
+					Properties:   nil,
 				},
 			},
 		},
@@ -792,7 +792,7 @@ func TestParseIntoDocumentedStruct_ListOfObjects(t *testing.T) {
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
-			Fields: []StructProperty{
+			Properties: []StructProperty{
 				{
 					Name: "server_name",
 					Documentation: PropertyDocBlock{
@@ -806,7 +806,7 @@ func TestParseIntoDocumentedStruct_ListOfObjects(t *testing.T) {
 					DataTypeStr:  "string",
 					Optional:     false,
 					DefaultValue: nil,
-					Fields:       nil,
+					Properties:   nil,
 				},
 				{
 					Name: "port",
@@ -821,7 +821,7 @@ func TestParseIntoDocumentedStruct_ListOfObjects(t *testing.T) {
 					DataTypeStr:  "number",
 					Optional:     true,
 					DefaultValue: strPtr("80"),
-					Fields:       nil,
+					Properties:   nil,
 				},
 			},
 		},
@@ -858,7 +858,7 @@ func TestParseIntoDocumentedStruct_ObjectWithOptionalObject(t *testing.T) {
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
-			Fields: []StructProperty{
+			Properties: []StructProperty{
 				{
 					Name: "ssh_keypair_name",
 					Documentation: PropertyDocBlock{
@@ -868,7 +868,7 @@ func TestParseIntoDocumentedStruct_ObjectWithOptionalObject(t *testing.T) {
 					DataTypeStr:  "string",
 					Optional:     false,
 					DefaultValue: nil,
-					Fields:       nil,
+					Properties:   nil,
 				},
 				{
 					Name: "enable_managed_scaling",
@@ -880,7 +880,7 @@ func TestParseIntoDocumentedStruct_ObjectWithOptionalObject(t *testing.T) {
 					NestedDataType: strPtr("EnableManagedScaling"),
 					Optional:       true,
 					DefaultValue:   nil,
-					Fields: []StructProperty{
+					Properties: []StructProperty{
 						{
 							Name: "enable_managed_scaling_draining",
 							Documentation: PropertyDocBlock{
@@ -890,7 +890,7 @@ func TestParseIntoDocumentedStruct_ObjectWithOptionalObject(t *testing.T) {
 							DataTypeStr:  "bool",
 							Optional:     false,
 							DefaultValue: nil,
-							Fields:       nil,
+							Properties:   nil,
 						},
 						{
 							Name: "enable_scale_in_protection",
@@ -901,7 +901,7 @@ func TestParseIntoDocumentedStruct_ObjectWithOptionalObject(t *testing.T) {
 							DataTypeStr:  "bool",
 							Optional:     false,
 							DefaultValue: nil,
-							Fields:       nil,
+							Properties:   nil,
 						},
 						{
 							Name: "target_capacity_percentage",
@@ -950,7 +950,7 @@ func TestParseIntoDocumentedStruct_ObjectWithNestedObject(t *testing.T) {
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
-			Fields: []StructProperty{
+			Properties: []StructProperty{
 				{
 					Name: "ssh_keypair_name",
 					Documentation: PropertyDocBlock{
@@ -960,7 +960,7 @@ func TestParseIntoDocumentedStruct_ObjectWithNestedObject(t *testing.T) {
 					DataTypeStr:  "string",
 					Optional:     false,
 					DefaultValue: nil,
-					Fields:       nil,
+					Properties:   nil,
 				},
 				{
 					Name: "enable_managed_scaling",
@@ -972,7 +972,7 @@ func TestParseIntoDocumentedStruct_ObjectWithNestedObject(t *testing.T) {
 					NestedDataType: strPtr("EnableManagedScaling"),
 					Optional:       false,
 					DefaultValue:   nil,
-					Fields: []StructProperty{
+					Properties: []StructProperty{
 						{
 							Name: "enable_managed_scaling_draining",
 							Documentation: PropertyDocBlock{
@@ -982,7 +982,7 @@ func TestParseIntoDocumentedStruct_ObjectWithNestedObject(t *testing.T) {
 							DataTypeStr:  "bool",
 							Optional:     false,
 							DefaultValue: nil,
-							Fields:       nil,
+							Properties:   nil,
 						},
 						{
 							Name: "enable_scale_in_protection",
@@ -993,7 +993,7 @@ func TestParseIntoDocumentedStruct_ObjectWithNestedObject(t *testing.T) {
 							DataTypeStr:  "bool",
 							Optional:     false,
 							DefaultValue: nil,
-							Fields:       nil,
+							Properties:   nil,
 						},
 						{
 							Name: "target_capacity_percentage",
@@ -1061,7 +1061,7 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
-			Fields: []StructProperty{
+			Properties: []StructProperty{
 				{
 					Name: "name",
 					Documentation: PropertyDocBlock{
@@ -1082,7 +1082,7 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 					NestedDataType: strPtr("HealthCheck"),
 					Optional:       true,
 					DefaultValue:   strPtr("null"),
-					Fields: []StructProperty{
+					Properties: []StructProperty{
 						{
 							Name: "enabled",
 							Documentation: PropertyDocBlock{
@@ -1113,7 +1113,7 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 							NestedDataType: strPtr("CalculatedCheck"),
 							Optional:       true,
 							DefaultValue:   strPtr("null"),
-							Fields: []StructProperty{
+							Properties: []StructProperty{
 								{
 									Name: "health_checks_to_monitor",
 									Documentation: PropertyDocBlock{
@@ -1146,7 +1146,7 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 							NestedDataType: strPtr("CloudwatchAlarmCheck"),
 							Optional:       true,
 							DefaultValue:   strPtr("null"),
-							Fields: []StructProperty{
+							Properties: []StructProperty{
 								{
 									Name: "alarm_name",
 									Documentation: PropertyDocBlock{
@@ -1179,7 +1179,7 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 							NestedDataType: strPtr("CloudwatchAlarms"),
 							Optional:       true,
 							DefaultValue:   strPtr("{}"),
-							Fields: []StructProperty{
+							Properties: []StructProperty{
 								{
 									Name: "metric_name",
 									Documentation: PropertyDocBlock{
@@ -1212,7 +1212,7 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 							NestedDataType: strPtr("EndpointCheck"),
 							Optional:       true,
 							DefaultValue:   strPtr("null"),
-							Fields: []StructProperty{
+							Properties: []StructProperty{
 								{
 									Name: "url",
 									Documentation: PropertyDocBlock{
@@ -1270,7 +1270,7 @@ func TestParseIntoDocumentedStruct_ObjectWithMapOfObjects(t *testing.T) {
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
-			Fields: []StructProperty{
+			Properties: []StructProperty{
 				{
 					Name: "configurations",
 					Documentation: PropertyDocBlock{
@@ -1281,7 +1281,7 @@ func TestParseIntoDocumentedStruct_ObjectWithMapOfObjects(t *testing.T) {
 					NestedDataType: strPtr("Configurations"),
 					Optional:       false,
 					DefaultValue:   nil,
-					Fields: []StructProperty{
+					Properties: []StructProperty{
 						{
 							Name: "setting_a",
 							Documentation: PropertyDocBlock{
