@@ -22,6 +22,7 @@ const (
 	DirRegex
 	DirSee
 	DirSince
+	DirType
 )
 
 const (
@@ -32,44 +33,11 @@ const (
 )
 
 type ParsedDirective struct {
-	Type  DirectiveType
+	Type DirectiveType
+	// Args is the list of arguments for the directive, delimited by spaces while
+	// respecting quoted substrings as a single argument.
 	Args  []string
 	Flags byte
-}
-
-func splitBySpacePreserveQuotes(s string) []string {
-	quoted := false
-
-	return strings.FieldsFunc(s, func(r rune) bool {
-		if r == '"' {
-			quoted = !quoted
-		}
-
-		return !quoted && r == ' '
-	})
-}
-
-func ParseDirective(name string, line string) ParsedDirective {
-	line = strings.TrimSpace(line)
-
-	switch name {
-	case "link":
-		return parseLinkDirective(line)
-	case "enum":
-		return parseEnumDirective(line)
-	case "example":
-		return parseExampleDirective(line)
-	case "regex":
-		return parseRegexDirective(line)
-	case "deprecated":
-		return newBasicDirective(DirDeprecated, line)
-	case "see":
-		return newBasicDirective(DirSee, line)
-	case "since":
-		return newBasicDirective(DirSince, line)
-	default:
-		return newInvalidDirective(DirUnsupported)
-	}
 }
 
 func newBasicDirective(dt DirectiveType, content string) ParsedDirective {
@@ -166,5 +134,52 @@ func parseRegexDirective(line string) ParsedDirective {
 		Type:  DirRegex,
 		Args:  args,
 		Flags: IsValid,
+	}
+}
+
+// splitBySpacePreserveQuotes splits a string by spaces while preserving quoted
+// substrings. For example,
+//
+//	arg1 "hello world" arg3
+//
+// would be split into:
+//
+//	["arg1", "hello world", "arg3"]
+func splitBySpacePreserveQuotes(s string) []string {
+	quoted := false
+
+	return strings.FieldsFunc(s, func(r rune) bool {
+		if r == '"' {
+			quoted = !quoted
+		}
+
+		return !quoted && r == ' '
+	})
+}
+
+// parseDirective parses a directive from its name and associated content,
+// returning a ParsedDirective encapsulating the details.
+func parseDirective(name string, line string) ParsedDirective {
+	line = strings.TrimSpace(line)
+
+	switch name {
+	case "link":
+		return parseLinkDirective(line)
+	case "enum":
+		return parseEnumDirective(line)
+	case "example":
+		return parseExampleDirective(line)
+	case "regex":
+		return parseRegexDirective(line)
+	case "type":
+		return newBasicDirective(DirType, line)
+	case "deprecated":
+		return newBasicDirective(DirDeprecated, line)
+	case "see":
+		return newBasicDirective(DirSee, line)
+	case "since":
+		return newBasicDirective(DirSince, line)
+	default:
+		return newInvalidDirective(DirUnsupported)
 	}
 }

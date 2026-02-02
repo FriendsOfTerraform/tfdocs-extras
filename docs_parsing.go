@@ -9,36 +9,37 @@ import (
 
 // DocDirective represents a documentation directive like @since, @param, etc.
 type DocDirective struct {
+	// The name of the directive without the `@` prefix
 	Name       string          `json:"name"`
 	Parsed     ParsedDirective `json:"parsed"`
 	RawContent string          `json:"rawContent"`
 }
 
-// FieldDocBlock contains parsed documentation for a field
-type FieldDocBlock struct {
+// PropertyDocBlock contains parsed documentation for a field
+type PropertyDocBlock struct {
 	Content    []string       `json:"content"`
 	Directives []DocDirective `json:"directives"`
 }
 
-// ObjectField represents a field within an object structure
-type ObjectField struct {
-	Name           string        `json:"name"`
-	Documentation  FieldDocBlock `json:"documentation"`
-	DataTypeStr    string        `json:"dataType"`
-	Optional       bool          `json:"optional"`
-	DefaultValue   *string       `json:"defaultValue,omitempty"`
-	NestedDataType *string       `json:"nestedDataType,omitempty"`
-	Fields         []ObjectField `json:"fields,omitempty"`
+// StructProperty represents a field within an object structure
+type StructProperty struct {
+	Name           string           `json:"name"`
+	Documentation  PropertyDocBlock `json:"documentation"`
+	DataTypeStr    string           `json:"dataType"`
+	Optional       bool             `json:"optional"`
+	DefaultValue   *string          `json:"defaultValue,omitempty"`
+	NestedDataType *string          `json:"nestedDataType,omitempty"`
+	Properties     []StructProperty `json:"properties,omitempty"`
 }
 
-// ObjectGroup represents a group of related object fields with documentation
-type ObjectGroup struct {
-	ObjectField `json:",inline"`
+// DocumentedStruct represents a group of related object fields with documentation
+type DocumentedStruct struct {
+	StructProperty `json:",inline"`
 
 	ParentDataType *string `json:"parentDataType,omitempty"`
 }
 
-func extractObjectFromArg(arg *astDataType) []ObjectField {
+func extractObjectFromArg(arg *astDataType) []StructProperty {
 	if isObjectType(*arg) {
 		if arg.Func.Args[0].Object != nil {
 			return parseObjectBlock(*arg.Func.Args[0].Object)
@@ -90,15 +91,15 @@ func iterateDocLines(block astDocBlock, fn func(line string)) {
 	}
 }
 
-func newEmptyFieldDocBlock() FieldDocBlock {
-	return FieldDocBlock{
+func newEmptyFieldDocBlock() PropertyDocBlock {
+	return PropertyDocBlock{
 		Content:    []string{},
 		Directives: []DocDirective{},
 	}
 }
 
-func newObjectField(name string) ObjectField {
-	return ObjectField{
+func newObjectField(name string) StructProperty {
+	return StructProperty{
 		Name:          name,
 		Documentation: newEmptyFieldDocBlock(),
 		Optional:      false,
@@ -107,7 +108,7 @@ func newObjectField(name string) ObjectField {
 	}
 }
 
-func handleObjectField(field *ObjectField, dataType astDataType) bool {
+func handleObjectField(field *StructProperty, dataType astDataType) bool {
 	if isObjectType(dataType) && dataType.Func.Args[0].Object != nil {
 		parseNestedObject(field, dataType.Func.Args[0].Object)
 
@@ -117,14 +118,14 @@ func handleObjectField(field *ObjectField, dataType astDataType) bool {
 	return false
 }
 
-func parseNestedObject(field *ObjectField, obj *astObject) {
+func parseNestedObject(field *StructProperty, obj *astObject) {
 	objectName := getObjectName(field.Name)
-	field.Fields = parseObjectBlock(*obj)
+	field.Properties = parseObjectBlock(*obj)
 	field.DataTypeStr = "object(" + objectName + ")"
 	field.NestedDataType = &objectName
 }
 
-func parseOptionalField(field *ObjectField, args []*astDataType) {
+func parseOptionalField(field *StructProperty, args []*astDataType) {
 	field.Optional = true
 
 	if len(args) == 0 {
@@ -141,7 +142,7 @@ func parseOptionalField(field *ObjectField, args []*astDataType) {
 }
 
 // parseOptionalFieldType handles parsing the type argument of an optional() call
-func parseOptionalFieldType(field *ObjectField, arg *astDataType) {
+func parseOptionalFieldType(field *StructProperty, arg *astDataType) {
 	// Handle map(object({...})) or list(object({...}))
 	if isCollectionType(*arg) {
 		if parseCollectionOfObjects(field, arg.Func) {
@@ -161,7 +162,7 @@ func parseOptionalFieldType(field *ObjectField, arg *astDataType) {
 }
 
 // parseCollectionOfObjects handles map(object({...})) or list(object({...})) patterns
-func parseCollectionOfObjects(field *ObjectField, fn *astFunction) bool {
+func parseCollectionOfObjects(field *StructProperty, fn *astFunction) bool {
 	if len(fn.Args) == 0 {
 		return false
 	}
@@ -172,7 +173,7 @@ func parseCollectionOfObjects(field *ObjectField, fn *astFunction) bool {
 	}
 
 	objectName := getObjectName(field.Name)
-	field.Fields = parseObjectBlock(*fn.Args[0].Func.Args[0].Object)
+	field.Properties = parseObjectBlock(*fn.Args[0].Func.Args[0].Object)
 	field.DataTypeStr = fn.Name + "(object(" + objectName + "))"
 	field.NestedDataType = &objectName
 
@@ -180,7 +181,7 @@ func parseCollectionOfObjects(field *ObjectField, fn *astFunction) bool {
 }
 
 // setDefaultValue sets the default value for a field from an astDataType
-func setDefaultValue(field *ObjectField, defaultArg *astDataType) {
+func setDefaultValue(field *StructProperty, defaultArg *astDataType) {
 	// Try to flatten primitives, numbers, strings, and function calls
 	if defaultFlattened := flattenSimpleTypes(*defaultArg); defaultFlattened != nil {
 		field.DefaultValue = defaultFlattened
@@ -247,34 +248,128 @@ func flattenSimpleTypes(data astDataType) *string {
 	return nil
 }
 
-func parseDocBlock(block astDocBlock) FieldDocBlock {
-	lineNo := 1
-	indentation := ""
-	doc := FieldDocBlock{}
+func hasOpeningBracket(s string) bool {
+	inString := false
+	escaped := false
 
-	iterateDocLines(block, func(line string) {
-		trimmed := strings.TrimLeft(line, " \t")
-
-		if lineNo == 1 {
-			indentation = line[:len(line)-len(trimmed)]
+	for _, ch := range s {
+		if escaped {
+			escaped = false
+			continue
 		}
 
+		if ch == '\\' {
+			escaped = true
+			continue
+		}
+
+		if ch == '"' {
+			inString = !inString
+			continue
+		}
+
+		if !inString && (ch == '(' || ch == '{') {
+			return true
+		}
+	}
+
+	return false
+}
+
+func isBracketsBalanced(lines []string) bool {
+	parenCount := 0
+	braceCount := 0
+	inString := false
+	escaped := false
+
+	for _, line := range lines {
+		for _, ch := range line {
+			if escaped {
+				escaped = false
+				continue
+			}
+
+			if ch == '\\' {
+				escaped = true
+				continue
+			}
+
+			if ch == '"' {
+				inString = !inString
+				continue
+			}
+
+			if inString {
+				continue
+			}
+
+			switch ch {
+			case '(':
+				parenCount++
+			case ')':
+				parenCount--
+			case '{':
+				braceCount++
+			case '}':
+				braceCount--
+			}
+		}
+	}
+
+	return parenCount == 0 && braceCount == 0
+}
+
+func parseDocBlock(block astDocBlock) PropertyDocBlock {
+	indentation := ""
+	indentationSet := false
+	doc := PropertyDocBlock{}
+
+	var currentDirective *DocDirective
+	var directiveLines []string
+
+	iterateDocLines(block, func(originalLine string) {
+		trimmed := strings.TrimLeft(originalLine, " \t")
+
+		if !indentationSet && trimmed != "" {
+			indentation = originalLine[:len(originalLine)-len(trimmed)]
+			indentationSet = true
+		}
+
+		line := originalLine
 		if strings.HasPrefix(line, indentation) {
 			line = line[len(indentation):]
 		}
 
-		if strings.HasPrefix(line, "@") {
+		if currentDirective != nil {
+			directiveLines = append(directiveLines, line)
+
+			if isBracketsBalanced(directiveLines) {
+				content := strings.Join(directiveLines, "\n")
+				currentDirective.RawContent = content
+				currentDirective.Parsed = parseDirective(currentDirective.Name, content)
+				doc.Directives = append(doc.Directives, *currentDirective)
+
+				currentDirective = nil
+				directiveLines = nil
+			}
+		} else if strings.HasPrefix(line, "@") {
 			name, content, _ := strings.Cut(line[1:], " ")
-			doc.Directives = append(doc.Directives, DocDirective{
-				Name:       name,
-				Parsed:     ParseDirective(name, content),
-				RawContent: content,
-			})
+
+			if hasOpeningBracket(content) && !isBracketsBalanced([]string{content}) {
+				currentDirective = &DocDirective{
+					Name: name,
+				}
+				directiveLines = []string{content}
+			} else {
+				doc.Directives = append(doc.Directives, DocDirective{
+					Name:       name,
+					Parsed:     parseDirective(name, content),
+					RawContent: content,
+				})
+			}
 		} else {
 			doc.Content = append(doc.Content, strings.TrimSpace(line))
 		}
-
-		lineNo++
 	})
 
 	doc.Content = trimEmptyLines(doc.Content)
@@ -282,8 +377,8 @@ func parseDocBlock(block astDocBlock) FieldDocBlock {
 	return doc
 }
 
-func parseObjectBlock(obj astObject) []ObjectField {
-	var fields []ObjectField
+func parseObjectBlock(obj astObject) []StructProperty {
+	var fields []StructProperty
 
 	for _, pair := range obj.Pairs {
 		field := newObjectField(pair.Key)
@@ -300,7 +395,7 @@ func parseObjectBlock(obj astObject) []ObjectField {
 }
 
 // parseFieldType determines and sets the type information for a field
-func parseFieldType(field *ObjectField, value *astDataType) {
+func parseFieldType(field *StructProperty, value *astDataType) {
 	switch {
 	case isOptionalType(*value):
 		parseOptionalField(field, value.Func.Args)
@@ -335,7 +430,7 @@ func buildObjectTypeName(name, prefix string) string {
 	return objectType
 }
 
-func parseObjectFunctionBlock(fxn astFunction, name string) *ObjectGroup {
+func parseObjectFunctionBlock(fxn astFunction, name string) *DocumentedStruct {
 	collectionPrefix := ""
 
 	switch fxn.Name {
@@ -349,8 +444,8 @@ func parseObjectFunctionBlock(fxn astFunction, name string) *ObjectGroup {
 		return nil
 	}
 
-	objGroup := &ObjectGroup{
-		ObjectField:    newObjectField(name),
+	objGroup := &DocumentedStruct{
+		StructProperty: newObjectField(name),
 		ParentDataType: &collectionPrefix,
 	}
 
@@ -361,7 +456,7 @@ func parseObjectFunctionBlock(fxn astFunction, name string) *ObjectGroup {
 
 	if len(fxn.Args) > 0 {
 		if fields := extractObjectFromArg(fxn.Args[0]); fields != nil {
-			objGroup.Fields = fields
+			objGroup.Properties = fields
 			objectName := getObjectName(name)
 			objGroup.NestedDataType = &objectName
 			objGroup.DataTypeStr = buildObjectTypeName(name, collectionPrefix)
@@ -371,7 +466,7 @@ func parseObjectFunctionBlock(fxn astFunction, name string) *ObjectGroup {
 	return objGroup
 }
 
-func parseStringIntoDocBlock(input string) FieldDocBlock {
+func parseStringIntoDocBlock(input string) PropertyDocBlock {
 	str := astDocBlockString(input)
 	blk := astDocBlock{
 		Block: &str,
@@ -391,7 +486,7 @@ func parseStringIntoDocBlock(input string) FieldDocBlock {
 //	  name = string
 //	  age = optional(number, 18)
 //	}))`, "user_config")
-func ParseIntoDocumentedStruct(input string, name string) (*ObjectGroup, error) {
+func ParseIntoDocumentedStruct(input string, name string) (*DocumentedStruct, error) {
 	root, err := parseAst(input)
 	if err != nil {
 		return nil, err

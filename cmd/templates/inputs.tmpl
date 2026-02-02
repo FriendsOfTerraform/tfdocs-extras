@@ -54,7 +54,7 @@
 {{define "table" -}}
     {{ template "doc_summary" . -}}
 
-    <table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>Default&nbsp;Value</th></tr></thead><tbody>
+    <table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>{{if eq .Type 3}}Sensitive{{else}}Default&nbsp;Value{{end}}</th></tr></thead><tbody>
         {{range .Rows -}}
             {{template "table_row" . -}}
         {{ end -}}
@@ -75,7 +75,7 @@
         {{- end -}}
     </td>
     <td width="100%">{{.Name}}</td>
-    <td>{{if .DefaultValue}}<code>{{.DefaultValue}}</code>{{end}}</td>
+    <td>{{if .HasDefaultValue}}<code>{{.DefaultValue}}</code>{{else if .Sensitive}}Yes{{end}}</td>
 </tr>
 <tr><td colspan="3">
 
@@ -98,9 +98,13 @@
 
 {{template "table" .OptionalInputs}}
 
-### Objects
+## Outputs
 
-{{range $key, $input := .NestedInputs}}
+{{template "table" .Outputs}}
+
+## Objects
+
+{{range $key, $input := .Objects}}
 
 #### {{$key}}
 

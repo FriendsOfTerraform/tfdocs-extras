@@ -90,7 +90,7 @@ func main() {
 		panic(err)
 	}
 
-	templateData := tfdocextras.ParseModuleInputsIntoManifest(module.Inputs)
+	templateData := tfdocextras.ParseModuleArgsIntoManifest(module.Inputs, module.Outputs)
 	var templateOutput bytes.Buffer
 	err = tmpl.Execute(&templateOutput, templateData)
 	if err != nil {

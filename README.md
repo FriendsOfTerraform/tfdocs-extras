@@ -37,7 +37,11 @@ To integrate this library with your own tool, you can install it as a dependency
 go get github.com/FriendsOfTerraform/tfdocs-extras
 ```
 
-As this library name suggestions, this provides extra functionality on top of the Terraform Docs library. We expose a single function, `ParseModuleInputsIntoManifest()`, to parse an array of `terraform.Input` (from `terraform-docs/terraform`) into an `InputsManifest` struct that contains both the Terraform data types and parsed documentation.
+This library provides extra functionality on top of Terraform Docs. It exposes its main functions for parsing Terraform type definitions and generating documentation manifests.
+
+### ParseModuleArgsIntoManifest
+
+The primary function for processing both inputs and outputs from a Terraform module. It returns a `ModuleManifest` containing parsed and structured documentation for required inputs, optional inputs, outputs, and nested object structures.
 
 ```go
 package main
@@ -57,12 +61,83 @@ func main() {
     config.ModuleRoot = "/path/to/tf-module-folder"
     module, _ := terraform.LoadWithOptions(config)
 
-    // Use tfdocs-extras to parse the inputs into a documented manifest
-    manifest := tfdocextras.ParseModuleInputsIntoManifest(module.Inputs)
+    // Parse both inputs and outputs into a complete manifest
+    manifest := tfdocextras.ParseModuleArgsIntoManifest(module.Inputs, module.Outputs)
+
+    // The manifest contains:
+    // - manifest.RequiredInputs: Required input variables
+    // - manifest.OptionalInputs: Optional input variables
+    // - manifest.Outputs: Module outputs
+    // - manifest.Objects: Nested object type definitions
 
     // Output the manifest as JSON for demonstration purposes
     astJSON, _ := json.MarshalIndent(manifest, "", "  ")
     fmt.Printf("%s\n", astJSON)
+}
+```
+
+### ParseIntoDocumentedStruct
+
+Parse a Terraform type definition string (such as `object({...})`, `map(object({...}))`, etc.) into a structured representation with documentation. This is useful when you need to parse type definitions directly without going through the full module loading process.
+
+```go
+package main
+
+import (
+    "encoding/json"
+    "fmt"
+    "strings"
+
+    "github.com/FriendsOfTerraform/tfdocs-extras"
+)
+
+func main() {
+    // Parse a type definition string
+    typeDefinition := `map(object({
+        /// The name of the configuration
+        /// @since 1.0.0
+        name = string
+        
+        /// The port number
+        /// @since 1.0.0
+        port = optional(number, 8080)
+        
+        /// Nested configuration settings
+        settings = optional(object({
+            /// Enable debug mode
+            debug = bool
+            
+            /// Timeout in seconds
+            timeout = number
+        }))
+    }))`
+
+    // Parse the type definition
+    documented, err := tfdocextras.ParseIntoDocumentedStruct(typeDefinition, "server_config")
+    if err != nil {
+        panic(err)
+    }
+
+    // Access the parsed structure
+    fmt.Printf("Type: %s\n", documented.DataTypeStr)
+    fmt.Printf("Nested Type: %s\n", *documented.NestedDataType)
+    
+    // Iterate through fields
+    for _, field := range documented.Properties {
+        fmt.Printf("\nField: %s\n", field.Name)
+        fmt.Printf("  Type: %s\n", field.DataTypeStr)
+        fmt.Printf("  Optional: %v\n", field.Optional)
+        fmt.Printf("  Description: %s\n", strings.Join(field.Documentation.Content, " "))
+        
+        // Access directives
+        for _, directive := range field.Documentation.Directives {
+            fmt.Printf("  @%s: %s\n", directive.Name, directive.RawContent)
+        }
+    }
+
+    // Convert to JSON
+    jsonOutput, _ := json.MarshalIndent(documented, "", "  ")
+    fmt.Printf("\nJSON Output:\n%s\n", jsonOutput)
 }
 ```
 
@@ -231,6 +306,33 @@ The version when the field was introduced.
 ```
 @since 1.0.0
 ```
+
+#### `@type`
+
+The `@type` directive allows you to specify an output's data type where the type information is not automatically available. This directive supports multiline type definitions for complex nested structures.
+
+```terraform
+output "nat_gateways" {
+  description = <<EOT
+    Map of default NAT gateways. The key of the map is the NAT gateway's name
+    
+    @since 1.0.0
+    @type map(object({
+      /// The availability zone of the NAT gateway
+      /// @since 1.0.0
+      availability_zone = string
+      
+      /// The association ID of the Elastic IP address that's associated with the NAT Gateway
+      /// @since 1.0.0
+      association_id = string
+    }))
+  EOT
+  value = aws_nat_gateway.this
+}
+```
+
+> [!NOTE]
+> The `@type` directive supports multiline definitions. When the directive contains an opening bracket (`(` or `{`), the parser will automatically continue reading subsequent lines until all brackets are balanced.
 
 ## License
 

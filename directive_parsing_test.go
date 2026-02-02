@@ -18,7 +18,7 @@ func TestParseDirective_NamedLinkDirective(t *testing.T) {
 		Flags: IsValid | IsNamedLink,
 	}
 
-	actual := ParseDirective("link", link)
+	actual := parseDirective("link", link)
 
 	if diff := deep.Equal(expected, actual); diff != nil {
 		t.Errorf("Expected %+v, but got %+v", expected, actual)
@@ -37,7 +37,7 @@ func TestParseDirective_ReferenceLinkDirective(t *testing.T) {
 		Flags: IsValid | IsReferenceLink,
 	}
 
-	actual := ParseDirective("link", link)
+	actual := parseDirective("link", link)
 
 	if diff := deep.Equal(expected, actual); diff != nil {
 		t.Errorf("Expected %+v, but got %+v", expected, actual)
@@ -57,7 +57,7 @@ func TestParseDirective_ExampleDirective(t *testing.T) {
 		Flags: IsValid,
 	}
 
-	actual := ParseDirective("example", link)
+	actual := parseDirective("example", link)
 
 	if diff := deep.Equal(expected, actual); diff != nil {
 		t.Errorf("Expected %+v, but got %+v", expected, actual)
@@ -77,7 +77,7 @@ func TestParseDirective_EnumDirective(t *testing.T) {
 		Flags: IsValid,
 	}
 
-	actual := ParseDirective("enum", raw)
+	actual := parseDirective("enum", raw)
 
 	if diff := deep.Equal(expected, actual); diff != nil {
 		t.Errorf("Expected %+v, but got %+v", expected, actual)
@@ -97,7 +97,7 @@ func TestParseDirective_EnumDirectiveWithSpaces(t *testing.T) {
 		Flags: IsValid,
 	}
 
-	actual := ParseDirective("enum", raw)
+	actual := parseDirective("enum", raw)
 
 	if diff := deep.Equal(expected, actual); diff != nil {
 		t.Errorf("Expected %+v, but got %+v", expected, actual)
@@ -118,7 +118,7 @@ func TestParseDirective_RegexDirective(t *testing.T) {
 		Flags: IsValid,
 	}
 
-	actual := ParseDirective("regex", raw)
+	actual := parseDirective("regex", raw)
 
 	if diff := deep.Equal(expected, actual); diff != nil {
 		t.Errorf("Expected %+v, but got %+v", expected, actual)
@@ -138,7 +138,7 @@ func TestParseDirective_RegexDirectiveWithSpaces(t *testing.T) {
 		Flags: IsValid,
 	}
 
-	actual := ParseDirective("regex", raw)
+	actual := parseDirective("regex", raw)
 
 	if diff := deep.Equal(expected, actual); diff != nil {
 		t.Errorf("Expected %+v, but got %+v", expected, actual)
@@ -158,7 +158,7 @@ func TestParseDirective_RegexWithSlash(t *testing.T) {
 		Flags: IsValid,
 	}
 
-	actual := ParseDirective("regex", raw)
+	actual := parseDirective("regex", raw)
 
 	if diff := deep.Equal(expected, actual); diff != nil {
 		t.Errorf("Expected %+v, but got %+v", expected, actual)

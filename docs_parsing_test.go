@@ -1,6 +1,7 @@
 package tfdocextras
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -383,6 +384,78 @@ func TestParseDocBlock_BlockWithNewlines(t *testing.T) {
 	}
 }
 
+func TestParseDocBlock_SingleLineType(t *testing.T) {
+	blockContent := astDocBlockString(strings.Replace(`
+		The ARN of the VPC
+	
+		@since 1.0.0
+		@type string
+	`, "\t", "", -1))
+	block := astDocBlock{
+		Lines: nil,
+		Block: &blockContent,
+	}
+
+	result := parseDocBlock(block)
+	expectedContent := []string{
+		"The ARN of the VPC",
+	}
+
+	if diff := deep.Equal(result.Content, expectedContent); diff != nil {
+		t.Errorf("Content mismatch:\n%v", diff)
+	}
+
+	explicitType := "string"
+	expectedDirectives := []DocDirective{
+		{Name: "since", RawContent: "1.0.0", Parsed: ParsedDirective{Type: DirSince, Args: []string{"1.0.0"}, Flags: IsValid}},
+		{Name: "type", RawContent: explicitType, Parsed: ParsedDirective{Type: DirType, Args: []string{explicitType}, Flags: IsValid}},
+	}
+
+	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {
+		t.Errorf("Directives mismatch:\n%v", diff)
+	}
+}
+
+func TestParseDocBlock_MultiLineDirective(t *testing.T) {
+	blockContent := astDocBlockString(strings.Replace(`
+		Map of default NAT gateways. The key of the map is the NAT gateway's name
+	
+		@since 1.0.0
+		@type map(object({
+		  /// The availability of the NAT gateway
+		  /// @since 1.0.0
+		  availability_zone = string
+	
+		  /// The association ID of the Elastic IP address that's associated with the NAT Gateway
+		  /// @since 1.0.0
+		  association_id = string
+		}))
+	`, "\t", "", -1))
+	block := astDocBlock{
+		Lines: nil,
+		Block: &blockContent,
+	}
+
+	result := parseDocBlock(block)
+	expectedContent := []string{
+		"Map of default NAT gateways. The key of the map is the NAT gateway's name",
+	}
+
+	if diff := deep.Equal(result.Content, expectedContent); diff != nil {
+		t.Errorf("RawContent mismatch:\n%v", diff)
+	}
+
+	explicitType := "map(object({\n  /// The availability of the NAT gateway\n  /// @since 1.0.0\n  availability_zone = string\n\n  /// The association ID of the Elastic IP address that's associated with the NAT Gateway\n  /// @since 1.0.0\n  association_id = string\n}))"
+	expectedDirectives := []DocDirective{
+		{Name: "since", RawContent: "1.0.0", Parsed: ParsedDirective{Type: DirSince, Args: []string{"1.0.0"}, Flags: IsValid}},
+		{Name: "type", RawContent: explicitType, Parsed: ParsedDirective{Type: DirType, Args: []string{explicitType}, Flags: IsValid}},
+	}
+
+	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {
+		t.Errorf("Directives mismatch:\n%v", diff)
+	}
+}
+
 func TestFlattenSimpleTypes_PrimitiveTypes(t *testing.T) {
 	primitiveStr := "string"
 	primitiveObj := astDataType{
@@ -454,7 +527,7 @@ func TestFlattenSimpleTypes_Functions(t *testing.T) {
 }
 
 func TestParseIntoDocumentedStruct_ObjectWithDocStringComments(t *testing.T) {
-	var objBlock *ObjectGroup
+	var objBlock *DocumentedStruct
 
 	if parsed, err := ParseIntoDocumentedStruct(`object({
 		/// The name of the user
@@ -471,23 +544,23 @@ func TestParseIntoDocumentedStruct_ObjectWithDocStringComments(t *testing.T) {
 		t.Fatalf("Failed to parse: %v", err)
 	}
 
-	if len(objBlock.Fields) != 2 {
-		t.Fatalf("Expected 2 fields, got %d", len(objBlock.Fields))
+	if len(objBlock.Properties) != 2 {
+		t.Fatalf("Expected 2 fields, got %d", len(objBlock.Properties))
 	}
 
-	expected := ObjectGroup{
-		ObjectField: ObjectField{
+	expected := DocumentedStruct{
+		StructProperty: StructProperty{
 			Name:           "test_object",
 			DataTypeStr:    "object(TestObject)",
 			NestedDataType: strPtr("TestObject"),
-			Documentation: FieldDocBlock{
+			Documentation: PropertyDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
-			Fields: []ObjectField{
+			Properties: []StructProperty{
 				{
 					Name: "enable_managed_scaling_draining",
-					Documentation: FieldDocBlock{
+					Documentation: PropertyDocBlock{
 						Content: []string{"The name of the user"},
 						Directives: []DocDirective{
 							{Name: "since", RawContent: "1.0.0", Parsed: ParsedDirective{Type: DirSince, Args: []string{"1.0.0"}, Flags: IsValid}},
@@ -499,7 +572,7 @@ func TestParseIntoDocumentedStruct_ObjectWithDocStringComments(t *testing.T) {
 				},
 				{
 					Name: "enable_scale_in_protection",
-					Documentation: FieldDocBlock{
+					Documentation: PropertyDocBlock{
 						Content: []string{"The age of the user"},
 						Directives: []DocDirective{
 							{Name: "since", RawContent: "1.0.0", Parsed: ParsedDirective{Type: DirSince, Args: []string{"1.0.0"}, Flags: IsValid}},
@@ -515,12 +588,12 @@ func TestParseIntoDocumentedStruct_ObjectWithDocStringComments(t *testing.T) {
 	}
 
 	if diff := deep.Equal(*objBlock, expected); diff != nil {
-		t.Errorf("ObjectGroup mismatch:\n%v", diff)
+		t.Errorf("DocumentedStruct mismatch:\n%v", diff)
 	}
 }
 
 func TestParseIntoDocumentedStruct_OptionalObject(t *testing.T) {
-	var objBlock *ObjectGroup
+	var objBlock *DocumentedStruct
 
 	if parsed, err := ParseIntoDocumentedStruct(`optional(object({
 		name = string
@@ -530,10 +603,10 @@ func TestParseIntoDocumentedStruct_OptionalObject(t *testing.T) {
 		t.Fatalf("Failed to parse: %v", err)
 	}
 
-	expected := ObjectGroup{
-		ObjectField: ObjectField{
+	expected := DocumentedStruct{
+		StructProperty: StructProperty{
 			Name: "test_object",
-			Documentation: FieldDocBlock{
+			Documentation: PropertyDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
@@ -541,9 +614,9 @@ func TestParseIntoDocumentedStruct_OptionalObject(t *testing.T) {
 			DefaultValue:   nil,
 			DataTypeStr:    "object(TestObject)",
 			NestedDataType: strPtr("TestObject"),
-			Fields: []ObjectField{
+			Properties: []StructProperty{
 				{
-					Documentation: FieldDocBlock{
+					Documentation: PropertyDocBlock{
 						Content:    []string{},
 						Directives: []DocDirective{},
 					},
@@ -551,7 +624,7 @@ func TestParseIntoDocumentedStruct_OptionalObject(t *testing.T) {
 					DataTypeStr:  "string",
 					Optional:     false,
 					DefaultValue: nil,
-					Fields:       nil,
+					Properties:   nil,
 				},
 			},
 		},
@@ -559,12 +632,12 @@ func TestParseIntoDocumentedStruct_OptionalObject(t *testing.T) {
 	}
 
 	if diff := deep.Equal(*objBlock, expected); diff != nil {
-		t.Errorf("ObjectGroup mismatch:\n%v", diff)
+		t.Errorf("DocumentedStruct mismatch:\n%v", diff)
 	}
 }
 
 func TestParseIntoDocumentedStruct_OptionalObjectWithObject(t *testing.T) {
-	var objBlock *ObjectGroup
+	var objBlock *DocumentedStruct
 
 	if parsed, err := ParseIntoDocumentedStruct(`optional(object({
 	  name = string
@@ -575,22 +648,22 @@ func TestParseIntoDocumentedStruct_OptionalObjectWithObject(t *testing.T) {
 	}))`, "user_profile"); err == nil && parsed != nil {
 		objBlock = parsed
 	} else {
-		t.Fatal("Expected non-nil ObjectGroup")
+		t.Fatal("Expected non-nil DocumentedStruct")
 	}
 
-	expected := ObjectGroup{
-		ObjectField: ObjectField{
+	expected := DocumentedStruct{
+		StructProperty: StructProperty{
 			Name:           "user_profile",
 			DataTypeStr:    "object(UserProfile)",
 			NestedDataType: strPtr("UserProfile"),
-			Documentation: FieldDocBlock{
+			Documentation: PropertyDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
 			Optional: true,
-			Fields: []ObjectField{
+			Properties: []StructProperty{
 				{
-					Documentation: FieldDocBlock{
+					Documentation: PropertyDocBlock{
 						Content:    []string{},
 						Directives: []DocDirective{},
 					},
@@ -598,10 +671,10 @@ func TestParseIntoDocumentedStruct_OptionalObjectWithObject(t *testing.T) {
 					DataTypeStr:  "string",
 					Optional:     false,
 					DefaultValue: nil,
-					Fields:       nil,
+					Properties:   nil,
 				},
 				{
-					Documentation: FieldDocBlock{
+					Documentation: PropertyDocBlock{
 						Content:    []string{},
 						Directives: []DocDirective{},
 					},
@@ -610,9 +683,9 @@ func TestParseIntoDocumentedStruct_OptionalObjectWithObject(t *testing.T) {
 					NestedDataType: strPtr("Address"),
 					Optional:       false,
 					DefaultValue:   nil,
-					Fields: []ObjectField{
+					Properties: []StructProperty{
 						{
-							Documentation: FieldDocBlock{
+							Documentation: PropertyDocBlock{
 								Content:    []string{},
 								Directives: []DocDirective{},
 							},
@@ -620,10 +693,10 @@ func TestParseIntoDocumentedStruct_OptionalObjectWithObject(t *testing.T) {
 							DataTypeStr:  "string",
 							Optional:     false,
 							DefaultValue: nil,
-							Fields:       nil,
+							Properties:   nil,
 						},
 						{
-							Documentation: FieldDocBlock{
+							Documentation: PropertyDocBlock{
 								Content:    []string{},
 								Directives: []DocDirective{},
 							},
@@ -631,7 +704,7 @@ func TestParseIntoDocumentedStruct_OptionalObjectWithObject(t *testing.T) {
 							DataTypeStr:  "string",
 							Optional:     false,
 							DefaultValue: nil,
-							Fields:       nil,
+							Properties:   nil,
 						},
 					},
 				},
@@ -646,7 +719,7 @@ func TestParseIntoDocumentedStruct_OptionalObjectWithObject(t *testing.T) {
 }
 
 func TestParseIntoDocumentedStruct_MapOfObjects(t *testing.T) {
-	var objBlock *ObjectGroup
+	var objBlock *DocumentedStruct
 
 	if parsed, err := ParseIntoDocumentedStruct(`map(object({
 	  /// Specify the number of EC2 instances that should be running in the group
@@ -656,22 +729,22 @@ func TestParseIntoDocumentedStruct_MapOfObjects(t *testing.T) {
 	}))`, "instance_config"); err == nil && parsed != nil {
 		objBlock = parsed
 	} else {
-		t.Fatal("Expected non-nil ObjectGroup")
+		t.Fatal("Expected non-nil DocumentedStruct")
 	}
 
-	expected := ObjectGroup{
-		ObjectField: ObjectField{
+	expected := DocumentedStruct{
+		StructProperty: StructProperty{
 			Name:           "instance_config",
 			DataTypeStr:    "map(object(InstanceConfig))",
 			NestedDataType: strPtr("InstanceConfig"),
-			Documentation: FieldDocBlock{
+			Documentation: PropertyDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
-			Fields: []ObjectField{
+			Properties: []StructProperty{
 				{
 					Name: "desired_instances",
-					Documentation: FieldDocBlock{
+					Documentation: PropertyDocBlock{
 						Content: []string{
 							"Specify the number of EC2 instances that should be running in the group",
 						},
@@ -682,7 +755,7 @@ func TestParseIntoDocumentedStruct_MapOfObjects(t *testing.T) {
 					DataTypeStr:  "number",
 					Optional:     false,
 					DefaultValue: nil,
-					Fields:       nil,
+					Properties:   nil,
 				},
 			},
 		},
@@ -695,7 +768,7 @@ func TestParseIntoDocumentedStruct_MapOfObjects(t *testing.T) {
 }
 
 func TestParseIntoDocumentedStruct_ListOfObjects(t *testing.T) {
-	var objBlock *ObjectGroup
+	var objBlock *DocumentedStruct
 
 	if parsed, err := ParseIntoDocumentedStruct(`list(object({
 	  /// The name of the server
@@ -707,22 +780,22 @@ func TestParseIntoDocumentedStruct_ListOfObjects(t *testing.T) {
 	}))`, "server_config"); err == nil && parsed != nil {
 		objBlock = parsed
 	} else {
-		t.Fatal("Expected non-nil ObjectGroup")
+		t.Fatal("Expected non-nil DocumentedStruct")
 	}
 
-	expected := ObjectGroup{
-		ObjectField: ObjectField{
+	expected := DocumentedStruct{
+		StructProperty: StructProperty{
 			Name:           "server_config",
 			DataTypeStr:    "list(object(ServerConfig))",
 			NestedDataType: strPtr("ServerConfig"),
-			Documentation: FieldDocBlock{
+			Documentation: PropertyDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
-			Fields: []ObjectField{
+			Properties: []StructProperty{
 				{
 					Name: "server_name",
-					Documentation: FieldDocBlock{
+					Documentation: PropertyDocBlock{
 						Content: []string{
 							"The name of the server",
 						},
@@ -733,11 +806,11 @@ func TestParseIntoDocumentedStruct_ListOfObjects(t *testing.T) {
 					DataTypeStr:  "string",
 					Optional:     false,
 					DefaultValue: nil,
-					Fields:       nil,
+					Properties:   nil,
 				},
 				{
 					Name: "port",
-					Documentation: FieldDocBlock{
+					Documentation: PropertyDocBlock{
 						Content: []string{
 							"The port number for the server",
 						},
@@ -748,7 +821,7 @@ func TestParseIntoDocumentedStruct_ListOfObjects(t *testing.T) {
 					DataTypeStr:  "number",
 					Optional:     true,
 					DefaultValue: strPtr("80"),
-					Fields:       nil,
+					Properties:   nil,
 				},
 			},
 		},
@@ -761,7 +834,7 @@ func TestParseIntoDocumentedStruct_ListOfObjects(t *testing.T) {
 }
 
 func TestParseIntoDocumentedStruct_ObjectWithOptionalObject(t *testing.T) {
-	var objBlock *ObjectGroup
+	var objBlock *DocumentedStruct
 
 	if parsed, err := ParseIntoDocumentedStruct(`object({
 	  ssh_keypair_name = string
@@ -773,33 +846,33 @@ func TestParseIntoDocumentedStruct_ObjectWithOptionalObject(t *testing.T) {
 	})`, "root_object"); err == nil && parsed != nil {
 		objBlock = parsed
 	} else {
-		t.Fatal("Expected non-nil ObjectGroup")
+		t.Fatal("Expected non-nil DocumentedStruct")
 	}
 
-	expected := ObjectGroup{
-		ObjectField: ObjectField{
+	expected := DocumentedStruct{
+		StructProperty: StructProperty{
 			Name:           "root_object",
 			DataTypeStr:    "object(RootObject)",
 			NestedDataType: strPtr("RootObject"),
-			Documentation: FieldDocBlock{
+			Documentation: PropertyDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
-			Fields: []ObjectField{
+			Properties: []StructProperty{
 				{
 					Name: "ssh_keypair_name",
-					Documentation: FieldDocBlock{
+					Documentation: PropertyDocBlock{
 						Content:    []string{},
 						Directives: []DocDirective{},
 					},
 					DataTypeStr:  "string",
 					Optional:     false,
 					DefaultValue: nil,
-					Fields:       nil,
+					Properties:   nil,
 				},
 				{
 					Name: "enable_managed_scaling",
-					Documentation: FieldDocBlock{
+					Documentation: PropertyDocBlock{
 						Content:    []string{},
 						Directives: []DocDirective{},
 					},
@@ -807,32 +880,32 @@ func TestParseIntoDocumentedStruct_ObjectWithOptionalObject(t *testing.T) {
 					NestedDataType: strPtr("EnableManagedScaling"),
 					Optional:       true,
 					DefaultValue:   nil,
-					Fields: []ObjectField{
+					Properties: []StructProperty{
 						{
 							Name: "enable_managed_scaling_draining",
-							Documentation: FieldDocBlock{
+							Documentation: PropertyDocBlock{
 								Content:    []string{},
 								Directives: []DocDirective{},
 							},
 							DataTypeStr:  "bool",
 							Optional:     false,
 							DefaultValue: nil,
-							Fields:       nil,
+							Properties:   nil,
 						},
 						{
 							Name: "enable_scale_in_protection",
-							Documentation: FieldDocBlock{
+							Documentation: PropertyDocBlock{
 								Content:    []string{},
 								Directives: []DocDirective{},
 							},
 							DataTypeStr:  "bool",
 							Optional:     false,
 							DefaultValue: nil,
-							Fields:       nil,
+							Properties:   nil,
 						},
 						{
 							Name: "target_capacity_percentage",
-							Documentation: FieldDocBlock{
+							Documentation: PropertyDocBlock{
 								Content:    []string{},
 								Directives: []DocDirective{},
 							},
@@ -853,7 +926,7 @@ func TestParseIntoDocumentedStruct_ObjectWithOptionalObject(t *testing.T) {
 }
 
 func TestParseIntoDocumentedStruct_ObjectWithNestedObject(t *testing.T) {
-	var objBlock *ObjectGroup
+	var objBlock *DocumentedStruct
 
 	if parsed, err := ParseIntoDocumentedStruct(`object({
 	  ssh_keypair_name = string
@@ -865,33 +938,33 @@ func TestParseIntoDocumentedStruct_ObjectWithNestedObject(t *testing.T) {
 	})`, "root_object"); err == nil && parsed != nil {
 		objBlock = parsed
 	} else {
-		t.Fatal("Expected non-nil ObjectGroup")
+		t.Fatal("Expected non-nil DocumentedStruct")
 	}
 
-	expected := ObjectGroup{
-		ObjectField: ObjectField{
+	expected := DocumentedStruct{
+		StructProperty: StructProperty{
 			Name:           "root_object",
 			DataTypeStr:    "object(RootObject)",
 			NestedDataType: strPtr("RootObject"),
-			Documentation: FieldDocBlock{
+			Documentation: PropertyDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
-			Fields: []ObjectField{
+			Properties: []StructProperty{
 				{
 					Name: "ssh_keypair_name",
-					Documentation: FieldDocBlock{
+					Documentation: PropertyDocBlock{
 						Content:    []string{},
 						Directives: []DocDirective{},
 					},
 					DataTypeStr:  "string",
 					Optional:     false,
 					DefaultValue: nil,
-					Fields:       nil,
+					Properties:   nil,
 				},
 				{
 					Name: "enable_managed_scaling",
-					Documentation: FieldDocBlock{
+					Documentation: PropertyDocBlock{
 						Content:    []string{},
 						Directives: []DocDirective{},
 					},
@@ -899,32 +972,32 @@ func TestParseIntoDocumentedStruct_ObjectWithNestedObject(t *testing.T) {
 					NestedDataType: strPtr("EnableManagedScaling"),
 					Optional:       false,
 					DefaultValue:   nil,
-					Fields: []ObjectField{
+					Properties: []StructProperty{
 						{
 							Name: "enable_managed_scaling_draining",
-							Documentation: FieldDocBlock{
+							Documentation: PropertyDocBlock{
 								Content:    []string{},
 								Directives: []DocDirective{},
 							},
 							DataTypeStr:  "bool",
 							Optional:     false,
 							DefaultValue: nil,
-							Fields:       nil,
+							Properties:   nil,
 						},
 						{
 							Name: "enable_scale_in_protection",
-							Documentation: FieldDocBlock{
+							Documentation: PropertyDocBlock{
 								Content:    []string{},
 								Directives: []DocDirective{},
 							},
 							DataTypeStr:  "bool",
 							Optional:     false,
 							DefaultValue: nil,
-							Fields:       nil,
+							Properties:   nil,
 						},
 						{
 							Name: "target_capacity_percentage",
-							Documentation: FieldDocBlock{
+							Documentation: PropertyDocBlock{
 								Content:    []string{},
 								Directives: []DocDirective{},
 							},
@@ -945,7 +1018,7 @@ func TestParseIntoDocumentedStruct_ObjectWithNestedObject(t *testing.T) {
 }
 
 func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
-	var objBlock *ObjectGroup
+	var objBlock *DocumentedStruct
 
 	if parsed, err := ParseIntoDocumentedStruct(`list(object({
 	  name            = string
@@ -976,22 +1049,22 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 	}))`, "health_check_config"); err == nil && parsed != nil {
 		objBlock = parsed
 	} else {
-		t.Fatal("Expected non-nil ObjectGroup")
+		t.Fatal("Expected non-nil DocumentedStruct")
 	}
 
-	expected := ObjectGroup{
-		ObjectField: ObjectField{
+	expected := DocumentedStruct{
+		StructProperty: StructProperty{
 			Name:           "health_check_config",
 			DataTypeStr:    "list(object(HealthCheckConfig))",
 			NestedDataType: strPtr("HealthCheckConfig"),
-			Documentation: FieldDocBlock{
+			Documentation: PropertyDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
-			Fields: []ObjectField{
+			Properties: []StructProperty{
 				{
 					Name: "name",
-					Documentation: FieldDocBlock{
+					Documentation: PropertyDocBlock{
 						Content:    []string{},
 						Directives: []DocDirective{},
 					},
@@ -1001,7 +1074,7 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 				},
 				{
 					Name: "health_check",
-					Documentation: FieldDocBlock{
+					Documentation: PropertyDocBlock{
 						Content:    []string{},
 						Directives: []DocDirective{},
 					},
@@ -1009,10 +1082,10 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 					NestedDataType: strPtr("HealthCheck"),
 					Optional:       true,
 					DefaultValue:   strPtr("null"),
-					Fields: []ObjectField{
+					Properties: []StructProperty{
 						{
 							Name: "enabled",
-							Documentation: FieldDocBlock{
+							Documentation: PropertyDocBlock{
 								Content:    []string{},
 								Directives: []DocDirective{},
 							},
@@ -1022,7 +1095,7 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 						},
 						{
 							Name: "invert_health_check_status",
-							Documentation: FieldDocBlock{
+							Documentation: PropertyDocBlock{
 								Content:    []string{},
 								Directives: []DocDirective{},
 							},
@@ -1032,7 +1105,7 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 						},
 						{
 							Name: "calculated_check",
-							Documentation: FieldDocBlock{
+							Documentation: PropertyDocBlock{
 								Content:    []string{},
 								Directives: []DocDirective{},
 							},
@@ -1040,10 +1113,10 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 							NestedDataType: strPtr("CalculatedCheck"),
 							Optional:       true,
 							DefaultValue:   strPtr("null"),
-							Fields: []ObjectField{
+							Properties: []StructProperty{
 								{
 									Name: "health_checks_to_monitor",
-									Documentation: FieldDocBlock{
+									Documentation: PropertyDocBlock{
 										Content:    []string{},
 										Directives: []DocDirective{},
 									},
@@ -1053,7 +1126,7 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 								},
 								{
 									Name: "healthy_threshold",
-									Documentation: FieldDocBlock{
+									Documentation: PropertyDocBlock{
 										Content:    []string{},
 										Directives: []DocDirective{},
 									},
@@ -1065,7 +1138,7 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 						},
 						{
 							Name: "cloudwatch_alarm_check",
-							Documentation: FieldDocBlock{
+							Documentation: PropertyDocBlock{
 								Content:    []string{},
 								Directives: []DocDirective{},
 							},
@@ -1073,10 +1146,10 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 							NestedDataType: strPtr("CloudwatchAlarmCheck"),
 							Optional:       true,
 							DefaultValue:   strPtr("null"),
-							Fields: []ObjectField{
+							Properties: []StructProperty{
 								{
 									Name: "alarm_name",
-									Documentation: FieldDocBlock{
+									Documentation: PropertyDocBlock{
 										Content:    []string{},
 										Directives: []DocDirective{},
 									},
@@ -1086,7 +1159,7 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 								},
 								{
 									Name: "alarm_region",
-									Documentation: FieldDocBlock{
+									Documentation: PropertyDocBlock{
 										Content:    []string{},
 										Directives: []DocDirective{},
 									},
@@ -1098,7 +1171,7 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 						},
 						{
 							Name: "cloudwatch_alarms",
-							Documentation: FieldDocBlock{
+							Documentation: PropertyDocBlock{
 								Content:    []string{},
 								Directives: []DocDirective{},
 							},
@@ -1106,10 +1179,10 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 							NestedDataType: strPtr("CloudwatchAlarms"),
 							Optional:       true,
 							DefaultValue:   strPtr("{}"),
-							Fields: []ObjectField{
+							Properties: []StructProperty{
 								{
 									Name: "metric_name",
-									Documentation: FieldDocBlock{
+									Documentation: PropertyDocBlock{
 										Content:    []string{},
 										Directives: []DocDirective{},
 									},
@@ -1119,7 +1192,7 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 								},
 								{
 									Name: "expression",
-									Documentation: FieldDocBlock{
+									Documentation: PropertyDocBlock{
 										Content:    []string{},
 										Directives: []DocDirective{},
 									},
@@ -1131,7 +1204,7 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 						},
 						{
 							Name: "endpoint_check",
-							Documentation: FieldDocBlock{
+							Documentation: PropertyDocBlock{
 								Content:    []string{},
 								Directives: []DocDirective{},
 							},
@@ -1139,10 +1212,10 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 							NestedDataType: strPtr("EndpointCheck"),
 							Optional:       true,
 							DefaultValue:   strPtr("null"),
-							Fields: []ObjectField{
+							Properties: []StructProperty{
 								{
 									Name: "url",
-									Documentation: FieldDocBlock{
+									Documentation: PropertyDocBlock{
 										Content:    []string{},
 										Directives: []DocDirective{},
 									},
@@ -1152,7 +1225,7 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 								},
 								{
 									Name: "enable_latency_graphs",
-									Documentation: FieldDocBlock{
+									Documentation: PropertyDocBlock{
 										Content:    []string{},
 										Directives: []DocDirective{},
 									},
@@ -1175,7 +1248,7 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 }
 
 func TestParseIntoDocumentedStruct_ObjectWithMapOfObjects(t *testing.T) {
-	var objBlock *ObjectGroup
+	var objBlock *DocumentedStruct
 
 	if parsed, err := ParseIntoDocumentedStruct(`object({
 	  configurations = map(object({
@@ -1185,22 +1258,22 @@ func TestParseIntoDocumentedStruct_ObjectWithMapOfObjects(t *testing.T) {
 	})`, "config_object"); err == nil && parsed != nil {
 		objBlock = parsed
 	} else {
-		t.Fatal("Expected non-nil ObjectGroup")
+		t.Fatal("Expected non-nil DocumentedStruct")
 	}
 
-	expected := ObjectGroup{
-		ObjectField: ObjectField{
+	expected := DocumentedStruct{
+		StructProperty: StructProperty{
 			Name:           "config_object",
 			DataTypeStr:    "object(ConfigObject)",
 			NestedDataType: strPtr("ConfigObject"),
-			Documentation: FieldDocBlock{
+			Documentation: PropertyDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
 			},
-			Fields: []ObjectField{
+			Properties: []StructProperty{
 				{
 					Name: "configurations",
-					Documentation: FieldDocBlock{
+					Documentation: PropertyDocBlock{
 						Content:    []string{},
 						Directives: []DocDirective{},
 					},
@@ -1208,10 +1281,10 @@ func TestParseIntoDocumentedStruct_ObjectWithMapOfObjects(t *testing.T) {
 					NestedDataType: strPtr("Configurations"),
 					Optional:       false,
 					DefaultValue:   nil,
-					Fields: []ObjectField{
+					Properties: []StructProperty{
 						{
 							Name: "setting_a",
-							Documentation: FieldDocBlock{
+							Documentation: PropertyDocBlock{
 								Content:    []string{},
 								Directives: []DocDirective{},
 							},
@@ -1221,7 +1294,7 @@ func TestParseIntoDocumentedStruct_ObjectWithMapOfObjects(t *testing.T) {
 						},
 						{
 							Name: "setting_b",
-							Documentation: FieldDocBlock{
+							Documentation: PropertyDocBlock{
 								Content:    []string{},
 								Directives: []DocDirective{},
 							},
@@ -1238,5 +1311,223 @@ func TestParseIntoDocumentedStruct_ObjectWithMapOfObjects(t *testing.T) {
 
 	if diff := deep.Equal(*objBlock, expected); diff != nil {
 		t.Error(diff)
+	}
+}
+
+func TestHasOpeningBracket_WithoutStrings(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{"has opening paren", "map(string)", true},
+		{"has opening brace", "object({", true},
+		{"no brackets", "string", false},
+		{"only closing brackets", "test)", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := hasOpeningBracket(tt.input)
+			if result != tt.expected {
+				t.Errorf("hasOpeningBracket(%q) = %v, expected %v", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestHasOpeningBracket_WithStrings(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{
+			name:     "bracket in string should be ignored",
+			input:    `description = "use format (like this)"`,
+			expected: false,
+		},
+		{
+			name:     "bracket outside string",
+			input:    `map("test")`,
+			expected: true,
+		},
+		{
+			name:     "bracket before string",
+			input:    `map(string, "description")`,
+			expected: true,
+		},
+		{
+			name:     "escaped quote with bracket",
+			input:    `"description with \" and (bracket)"`,
+			expected: false,
+		},
+		{
+			name:     "multiple strings with brackets inside",
+			input:    `"first (test)" and "second {test}"`,
+			expected: false,
+		},
+		{
+			name:     "bracket after quoted string",
+			input:    `"test" + map(`,
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := hasOpeningBracket(tt.input)
+			if result != tt.expected {
+				t.Errorf("hasOpeningBracket(%q) = %v, expected %v", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsBracketsBalanced_SimpleTypes(t *testing.T) {
+	tests := []struct {
+		name     string
+		lines    []string
+		expected bool
+	}{
+		{
+			name:     "balanced parentheses",
+			lines:    []string{"map(string)"},
+			expected: true,
+		},
+		{
+			name:     "balanced braces",
+			lines:    []string{"object({name = string})"},
+			expected: true,
+		},
+		{
+			name:     "unbalanced opening paren",
+			lines:    []string{"map(string"},
+			expected: false,
+		},
+		{
+			name:     "unbalanced opening brace",
+			lines:    []string{"object({name = string"},
+			expected: false,
+		},
+		{
+			name:     "multiline balanced",
+			lines:    []string{"map(object({", "  name = string", "}))"},
+			expected: true,
+		},
+		{
+			name:     "multiline unbalanced",
+			lines:    []string{"map(object({", "  name = string", "})"},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isBracketsBalanced(tt.lines)
+			if result != tt.expected {
+				t.Errorf("isBracketsBalanced(%v) = %v, expected %v", tt.lines, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsBracketsBalanced_WithStringLiterals(t *testing.T) {
+	tests := []struct {
+		name     string
+		lines    []string
+		expected bool
+	}{
+		{
+			name:     "brackets in string literal should be ignored",
+			lines:    []string{`string, description = "use format (like this)"`},
+			expected: true,
+		},
+		{
+			name:     "unbalanced bracket outside string",
+			lines:    []string{`map(string, description = "test")`},
+			expected: true,
+		},
+		{
+			name:     "unbalanced in string but balanced overall",
+			lines:    []string{`map(object({ desc = "incomplete (bracket" }))`},
+			expected: true,
+		},
+		{
+			name:     "escaped quote with bracket",
+			lines:    []string{`map(string, note = "use \" and (this)"`},
+			expected: false,
+		},
+		{
+			name:     "multiple strings with brackets",
+			lines:    []string{`object({ a = "test (1)", b = "test {2}" })`},
+			expected: true,
+		},
+		{
+			name: "multiline with string containing brackets",
+			lines: []string{
+				`map(object({`,
+				`  /// Description with (parentheses)`,
+				`  name = string`,
+				`}))`,
+			},
+			expected: true,
+		},
+		{
+			name: "string spanning multiple lines would break but we only handle single line strings",
+			lines: []string{
+				`map(string`,
+				`)`,
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isBracketsBalanced(tt.lines)
+			if result != tt.expected {
+				t.Errorf("isBracketsBalanced(%v) = %v, expected %v", tt.lines, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseDocBlock_MultiLineDirectiveWithStringLiterals(t *testing.T) {
+	blockContent := astDocBlockString(`
+		Output description
+
+		@type map(object({
+		  /// Field with description "(like this)"
+		  name = string
+		  
+		  /// Another field with {curly} brackets
+		  value = number
+		}))
+	`)
+	block := astDocBlock{
+		Lines: nil,
+		Block: &blockContent,
+	}
+
+	result := parseDocBlock(block)
+
+	if len(result.Directives) != 1 {
+		t.Fatalf("Expected 1 directive, got %d", len(result.Directives))
+	}
+
+	typeDir := result.Directives[0]
+	if typeDir.Name != "type" {
+		t.Errorf("Expected directive name 'type', got '%s'", typeDir.Name)
+	}
+
+	// The directive should have captured all lines until brackets are balanced
+	// even though the comments contain brackets in strings
+	if !strings.Contains(typeDir.RawContent, "name = string") {
+		t.Error("Expected type directive to contain 'name = string'")
+	}
+
+	if !strings.Contains(typeDir.RawContent, "value = number") {
+		t.Error("Expected type directive to contain 'value = number'")
 	}
 }
