@@ -98,9 +98,13 @@
 
 {{template "table" .OptionalInputs}}
 
-### Objects
+## Outputs
 
-{{range $key, $input := .NestedInputs}}
+{{template "table" .Outputs}}
+
+## Objects
+
+{{range $key, $input := .Objects}}
 
 #### {{$key}}
 
