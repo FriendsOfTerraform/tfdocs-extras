@@ -68,7 +68,7 @@ func main() {
     // - manifest.RequiredInputs: Required input variables
     // - manifest.OptionalInputs: Optional input variables
     // - manifest.Outputs: Module outputs
-    // - manifest.NestedObjects: Nested object type definitions
+    // - manifest.Objects: Nested object type definitions
 
     // Output the manifest as JSON for demonstration purposes
     astJSON, _ := json.MarshalIndent(manifest, "", "  ")
@@ -123,7 +123,7 @@ func main() {
     fmt.Printf("Nested Type: %s\n", *documented.NestedDataType)
     
     // Iterate through fields
-    for _, field := range documented.Fields {
+    for _, field := range documented.Properties {
         fmt.Printf("\nField: %s\n", field.Name)
         fmt.Printf("  Type: %s\n", field.DataTypeStr)
         fmt.Printf("  Optional: %v\n", field.Optional)

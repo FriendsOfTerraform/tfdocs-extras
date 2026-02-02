@@ -229,10 +229,6 @@ func processStructAndNested(extras *DocumentedStruct, manifest *ModuleManifest) 
 	}
 
 	recordNested(extras.StructProperty, manifest)
-
-	for _, field := range extras.StructProperty.Properties {
-		recordNested(field, manifest)
-	}
 }
 
 func createArgumentFromDocBlock(name string, typeStr string, docBlk PropertyDocBlock, extras *DocumentedStruct, manifest *ModuleManifest) Argument {
@@ -288,6 +284,7 @@ func ParseModuleArgsIntoManifest(inputs []*terraform.Input, outputs []*terraform
 
 		if output.Description == "" {
 			tableRow := newArgument(outputType, output.Name, "")
+			tableRow.Sensitive = output.Sensitive
 			templateData.Outputs.Rows = append(templateData.Outputs.Rows, tableRow)
 
 			continue
@@ -297,7 +294,7 @@ func ParseModuleArgsIntoManifest(inputs []*terraform.Input, outputs []*terraform
 		typeDef := findTypeDirective(docBlk.Directives)
 
 		var extras *DocumentedStruct
-		if typeDef != nil {
+		if typeDef != nil && len(typeDef.Parsed.Args) > 0 {
 			outputType = typeDef.Parsed.Args[0]
 			extras, _ = ParseIntoDocumentedStruct(outputType, output.Name)
 		}
