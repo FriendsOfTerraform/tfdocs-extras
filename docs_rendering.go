@@ -8,30 +8,30 @@ import (
 	"golang.org/x/text/language"
 )
 
-type TableRowAttribute struct {
+type MetadataAttribute struct {
 	Name    string `json:"name,omitempty"`
 	Content string `json:"content,omitempty"`
 }
 
-type RowMetadata struct {
-	Attributes    []TableRowAttribute `json:"attributes,omitempty"`
+type ArgumentMetadata struct {
+	Attributes    []MetadataAttribute `json:"attributes,omitempty"`
 	Enumerations  []string            `json:"enumerations,omitempty"`
-	Examples      []TableRowAttribute `json:"examples,omitempty"`
-	Links         []TableRowAttribute `json:"links,omitempty"`
+	Examples      []MetadataAttribute `json:"examples,omitempty"`
+	Links         []MetadataAttribute `json:"links,omitempty"`
 	RegexPattern  string              `json:"regex_pattern,omitempty"`
 	RegexExamples []string            `json:"regex_examples,omitempty"`
 }
 
-type TableRow struct {
+type Argument struct {
 	Type         string  `json:"type,omitempty"`
 	ComplexType  *string `json:"complex_type,omitempty"`
 	Name         string  `json:"name,omitempty"`
 	DefaultValue string  `json:"default_value,omitempty"`
 	Description  string  `json:"description,omitempty"`
-	RowMetadata
+	ArgumentMetadata
 }
 
-func (r *TableRow) GetAnchor() string {
+func (r *Argument) GetAnchor() string {
 	if r.ComplexType == nil {
 		return ""
 	}
@@ -39,7 +39,7 @@ func (r *TableRow) GetAnchor() string {
 	return strings.ToLower(*r.ComplexType)
 }
 
-func (r *TableRow) GetParentType() [2]string {
+func (r *Argument) GetParentType() [2]string {
 	if r.ComplexType == nil {
 		return [2]string{"", ""}
 	}
@@ -53,74 +53,72 @@ func (r *TableRow) GetParentType() [2]string {
 	return [2]string{"", ""}
 }
 
-func (r *TableRow) GetMetadata() *RowMetadata {
-	return &r.RowMetadata
+func (r *Argument) GetMetadata() *ArgumentMetadata {
+	return &r.ArgumentMetadata
 }
 
-type TableData struct {
+type ArgumentGroup struct {
 	Description string     `json:"description"`
-	Rows        []TableRow `json:"rows,omitempty"`
-	RowMetadata
+	Rows        []Argument `json:"rows,omitempty"`
+	ArgumentMetadata
 }
 
-func (d *TableData) GetMetadata() *RowMetadata {
-	return &d.RowMetadata
+func (d *ArgumentGroup) GetMetadata() *ArgumentMetadata {
+	return &d.ArgumentMetadata
 }
 
 type ModuleManifest struct {
-	RequiredInputs TableData            `json:"required_inputs,omitempty"`
-	OptionalInputs TableData            `json:"optional_inputs,omitempty"`
-	NestedInputs   map[string]TableData `json:"nested_inputs,omitempty"`
-	ReferenceLinks map[string]string    `json:"reference_links,omitempty"`
-	Outputs        TableData            `json:"outputs,omitempty"`
-	NestedOutputs  map[string]TableData `json:"nested_outputs,omitempty"`
+	RequiredInputs ArgumentGroup            `json:"required_inputs,omitempty"`
+	OptionalInputs ArgumentGroup            `json:"optional_inputs,omitempty"`
+	Outputs        ArgumentGroup            `json:"outputs,omitempty"`
+	Objects        map[string]ArgumentGroup `json:"objects,omitempty"`
+	ReferenceLinks map[string]string        `json:"reference_links,omitempty"`
 }
 
-func newTableData() TableData {
-	return TableData{
+func newArgumentGroup() ArgumentGroup {
+	return ArgumentGroup{
 		Description: "",
-		RowMetadata: RowMetadata{
-			Attributes:    []TableRowAttribute{},
+		ArgumentMetadata: ArgumentMetadata{
+			Attributes:    []MetadataAttribute{},
 			Enumerations:  []string{},
-			Examples:      []TableRowAttribute{},
-			Links:         []TableRowAttribute{},
+			Examples:      []MetadataAttribute{},
+			Links:         []MetadataAttribute{},
 			RegexPattern:  "",
 			RegexExamples: []string{},
 		},
-		Rows: []TableRow{},
+		Rows: []Argument{},
 	}
 }
 
-func newTableRow(typeStr, name, defaultValue, description string) TableRow {
-	return TableRow{
+func newArgument(typeStr, name, defaultValue, description string) Argument {
+	return Argument{
 		Type:         typeStr,
 		Name:         name,
 		DefaultValue: defaultValue,
 		Description:  description,
-		RowMetadata: RowMetadata{
-			Attributes:    []TableRowAttribute{},
+		ArgumentMetadata: ArgumentMetadata{
+			Attributes:    []MetadataAttribute{},
 			Enumerations:  []string{},
-			Examples:      []TableRowAttribute{},
-			Links:         []TableRowAttribute{},
+			Examples:      []MetadataAttribute{},
+			Links:         []MetadataAttribute{},
 			RegexPattern:  "",
 			RegexExamples: []string{},
 		},
 	}
 }
 
-func newTemplateData() *ModuleManifest {
+func newModuleManifest() *ModuleManifest {
 	return &ModuleManifest{
-		RequiredInputs: newTableData(),
-		OptionalInputs: newTableData(),
-		NestedInputs:   make(map[string]TableData),
+		RequiredInputs: newArgumentGroup(),
+		OptionalInputs: newArgumentGroup(),
+		Objects:        make(map[string]ArgumentGroup),
 		ReferenceLinks: make(map[string]string),
-		Outputs:        newTableData(),
-		NestedOutputs:  make(map[string]TableData),
+		Outputs:        newArgumentGroup(),
 	}
 }
 
-func processDirectives(directives []DocDirective, manifest *ModuleManifest, data *TableData, row *TableRow) {
-	var metadata *RowMetadata
+func processDirectives(directives []DocDirective, manifest *ModuleManifest, data *ArgumentGroup, row *Argument) {
+	var metadata *ArgumentMetadata
 
 	if data != nil {
 		metadata = data.GetMetadata()
@@ -141,7 +139,7 @@ func processDirectives(directives []DocDirective, manifest *ModuleManifest, data
 		case DirEnum:
 			metadata.Enumerations = append(metadata.Enumerations, attr.Parsed.Args...)
 		case DirExample:
-			metadata.Examples = append(metadata.Examples, TableRowAttribute{
+			metadata.Examples = append(metadata.Examples, MetadataAttribute{
 				Name:    attr.Parsed.Args[0],
 				Content: getArgOrDefault(attr.Parsed.Args, 1),
 			})
@@ -149,7 +147,7 @@ func processDirectives(directives []DocDirective, manifest *ModuleManifest, data
 			if (attr.Parsed.Flags & IsReferenceLink) != 0 {
 				manifest.ReferenceLinks[attr.Parsed.Args[0]] = attr.Parsed.Args[1]
 			} else if (attr.Parsed.Flags & IsNamedLink) != 0 {
-				metadata.Links = append(metadata.Links, TableRowAttribute{
+				metadata.Links = append(metadata.Links, MetadataAttribute{
 					Name:    attr.Parsed.Args[0],
 					Content: getArgOrDefault(attr.Parsed.Args, 1),
 				})
@@ -161,7 +159,7 @@ func processDirectives(directives []DocDirective, manifest *ModuleManifest, data
 			}
 		default:
 			caser := cases.Title(language.English)
-			metadata.Attributes = append(metadata.Attributes, TableRowAttribute{
+			metadata.Attributes = append(metadata.Attributes, MetadataAttribute{
 				Name:    caser.String(attr.Name),
 				Content: attr.RawContent,
 			})
@@ -177,13 +175,13 @@ func getArgOrDefault(args []string, index int) string {
 	return ""
 }
 
-func recordNested(group ObjectField, manifest *ModuleManifest) {
+func recordNested(group StructProperty, manifest *ModuleManifest) {
 	if group.NestedDataType == nil {
 		return
 	}
 
 	if group.Fields != nil && len(group.Fields) > 0 {
-		data := newTableData()
+		data := newArgumentGroup()
 		data.Description = strings.Join(group.Documentation.Content, "\n")
 
 		processDirectives(group.Documentation.Directives, manifest, &data, nil)
@@ -195,7 +193,7 @@ func recordNested(group ObjectField, manifest *ModuleManifest) {
 				defaultValue = *field.DefaultValue
 			}
 
-			row := newTableRow(field.DataTypeStr, field.Name, defaultValue, strings.Join(field.Documentation.Content, "\n"))
+			row := newArgument(field.DataTypeStr, field.Name, defaultValue, strings.Join(field.Documentation.Content, "\n"))
 
 			if field.NestedDataType != nil {
 				row.ComplexType = field.NestedDataType
@@ -206,7 +204,7 @@ func recordNested(group ObjectField, manifest *ModuleManifest) {
 			data.Rows = append(data.Rows, row)
 		}
 
-		manifest.NestedInputs[*group.NestedDataType] = data
+		manifest.Objects[*group.NestedDataType] = data
 	}
 
 	for _, field := range group.Fields {
@@ -215,10 +213,10 @@ func recordNested(group ObjectField, manifest *ModuleManifest) {
 }
 
 func ParseModuleInputsIntoManifest(inputs []*terraform.Input, outputs []*terraform.Output) *ModuleManifest {
-	templateData := newTemplateData()
+	templateData := newModuleManifest()
 
 	for _, input := range inputs {
-		var extras ObjectGroup
+		var extras DocumentedStruct
 		if input.Type != "" {
 			documented, astErr := ParseIntoDocumentedStruct(string(input.Type), input.Name)
 
@@ -228,13 +226,13 @@ func ParseModuleInputsIntoManifest(inputs []*terraform.Input, outputs []*terrafo
 		}
 
 		docBlk := parseStringIntoDocBlock(string(input.Description))
-		tableRow := newTableRow(string(input.Type), input.Name, input.GetValue(), strings.Join(docBlk.Content, "\n"))
+		tableRow := newArgument(string(input.Type), input.Name, input.GetValue(), strings.Join(docBlk.Content, "\n"))
 
 		processDirectives(docBlk.Directives, templateData, nil, &tableRow)
 
-		if extras.ObjectField.NestedDataType != nil {
-			tableRow.Type = extras.ObjectField.DataTypeStr
-			tableRow.ComplexType = extras.ObjectField.NestedDataType
+		if extras.StructProperty.NestedDataType != nil {
+			tableRow.Type = extras.StructProperty.DataTypeStr
+			tableRow.ComplexType = extras.StructProperty.NestedDataType
 		}
 
 		if input.Required {
@@ -243,9 +241,9 @@ func ParseModuleInputsIntoManifest(inputs []*terraform.Input, outputs []*terrafo
 			templateData.OptionalInputs.Rows = append(templateData.OptionalInputs.Rows, tableRow)
 		}
 
-		recordNested(extras.ObjectField, templateData)
+		recordNested(extras.StructProperty, templateData)
 
-		for _, field := range extras.ObjectField.Fields {
+		for _, field := range extras.StructProperty.Fields {
 			recordNested(field, templateData)
 		}
 	}
@@ -271,21 +269,21 @@ func ParseModuleInputsIntoManifest(inputs []*terraform.Input, outputs []*terrafo
 			outputType = typeDef.Parsed.Args[0]
 		}
 
-		tableRow := newTableRow(outputType, output.Name, "", strings.Join(docBlk.Content, "\n"))
+		tableRow := newArgument(outputType, output.Name, "", strings.Join(docBlk.Content, "\n"))
 
 		processDirectives(docBlk.Directives, templateData, nil, &tableRow)
 
-		if extras != nil && extras.ObjectField.NestedDataType != nil {
-			tableRow.Type = extras.ObjectField.DataTypeStr
-			tableRow.ComplexType = extras.ObjectField.NestedDataType
+		if extras != nil && extras.StructProperty.NestedDataType != nil {
+			tableRow.Type = extras.StructProperty.DataTypeStr
+			tableRow.ComplexType = extras.StructProperty.NestedDataType
 		}
 
 		templateData.Outputs.Rows = append(templateData.Outputs.Rows, tableRow)
 
 		if extras != nil {
-			recordNested(extras.ObjectField, templateData)
+			recordNested(extras.StructProperty, templateData)
 
-			for _, field := range extras.ObjectField.Fields {
+			for _, field := range extras.StructProperty.Fields {
 				recordNested(field, templateData)
 			}
 		}
