@@ -284,7 +284,12 @@ func ParseModuleArgsIntoManifest(inputs []*terraform.Input, outputs []*terraform
 	}
 
 	for _, output := range outputs {
+		outputType := "unknown"
+
 		if output.Description == "" {
+			tableRow := newArgument(outputType, output.Name, "")
+			templateData.Outputs.Rows = append(templateData.Outputs.Rows, tableRow)
+
 			continue
 		}
 
@@ -292,8 +297,6 @@ func ParseModuleArgsIntoManifest(inputs []*terraform.Input, outputs []*terraform
 		typeDef := findTypeDirective(docBlk.Directives)
 
 		var extras *DocumentedStruct
-		outputType := "unknown"
-
 		if typeDef != nil {
 			outputType = typeDef.Parsed.Args[0]
 			extras, _ = ParseIntoDocumentedStruct(outputType, output.Name)
