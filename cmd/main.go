@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"embed"
+	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -59,11 +61,14 @@ func replaceContentBetweenMarkers(content, startMarker, endMarker, newContent st
 }
 
 func main() {
-	modulePath := os.Args[1]
+	jsonOutput := flag.Bool("json", false, "output JSON representation of template data to stdout")
+	flag.Parse()
 
-	if modulePath == "" {
+	if flag.NArg() < 1 {
 		log.Fatal("Module path argument is required")
 	}
+
+	modulePath := flag.Arg(0)
 
 	config := print.DefaultConfig()
 	config.ModuleRoot = modulePath
@@ -71,6 +76,18 @@ func main() {
 	module, err := terraform.LoadWithOptions(config)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	templateData := tfdocextras.ParseModuleArgsIntoManifest(module.Inputs, module.Outputs)
+
+	// If -json flag is set, output JSON and exit
+	if *jsonOutput {
+		jsonBytes, err := json.MarshalIndent(templateData, "", "  ")
+		if err != nil {
+			log.Fatalf("Failed to marshal JSON: %v", err)
+		}
+		fmt.Println(string(jsonBytes))
+		return
 	}
 
 	// Read the README.md file
@@ -90,7 +107,6 @@ func main() {
 		panic(err)
 	}
 
-	templateData := tfdocextras.ParseModuleArgsIntoManifest(module.Inputs, module.Outputs)
 	var templateOutput bytes.Buffer
 	err = tmpl.Execute(&templateOutput, templateData)
 	if err != nil {
