@@ -3,7 +3,7 @@
 # Variables
 GO := go
 GOFLAGS := -v
-BINARY_NAME := tfdocs-extra
+BINARY_NAME := tfdocs-extras
 BIN_DIR := bin
 COVERAGE_FILE := coverage.out
 COVERAGE_HTML := coverage.html
