@@ -1,0 +1,105 @@
+name: 'tfdocs-extras'
+description: 'Generate Terraform object() type documentation in README.md files using tfdocs-extras'
+author: 'Vladimir "allejo" Jimenez'
+
+branding:
+  icon: 'book-open'
+  color: 'purple'
+
+inputs:
+  directories:
+    description: |
+      Newline-separated list of Terraform module directories to process. Each directory
+      will be checked for a README.md containing TFDOCS_EXTRAS_START/TFDOCS_EXTRAS_END
+      markers and processed if found.
+    required: true
+  version:
+    description: 'Version of tfdocs-extras to download (e.g. "v0.1.0"). Defaults to the latest release.'
+    required: false
+    default: 'latest'
+  token:
+    description: 'GitHub token used to download the release binary and avoid API rate limits.'
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Download tfdocs-extras
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        # Detect OS
+        case "${{ runner.os }}" in
+          Linux)   BINARY_OS="linux" ;;
+          macOS)   BINARY_OS="darwin" ;;
+          Windows) BINARY_OS="windows" ;;
+          *) echo "::error::Unsupported OS: ${{ runner.os }}"; exit 1 ;;
+        esac
+
+        # Detect architecture
+        case "${{ runner.arch }}" in
+          X64)   BINARY_ARCH="amd64" ;;
+          ARM64) BINARY_ARCH="arm64" ;;
+          *) echo "::error::Unsupported architecture: ${{ runner.arch }}"; exit 1 ;;
+        esac
+
+        # Resolve 'latest' to the actual version tag
+        if [ "$VERSION" = "latest" ]; then
+          VERSION=$(gh release view \
+            --repo FriendsOfTerraform/tfdocs-extras \
+            --json tagName \
+            --jq '.tagName')
+          echo "Resolved latest version: $VERSION"
+        fi
+
+        # Build binary name matching the release asset naming convention
+        EXT=""
+        [ "$BINARY_OS" = "windows" ] && EXT=".exe"
+        BINARY_NAME="tfdocs-extras-${VERSION}-${BINARY_OS}-${BINARY_ARCH}${EXT}"
+        DEST="${RUNNER_TEMP}/tfdocs-extras${EXT}"
+
+        echo "Downloading $BINARY_NAME..."
+        gh release download "$VERSION" \
+          --repo FriendsOfTerraform/tfdocs-extras \
+          --pattern "$BINARY_NAME" \
+          --output "$DEST"
+        chmod +x "$DEST"
+
+        echo "TFDOCS_EXTRAS_BIN=$DEST" >> "$GITHUB_ENV"
+
+    - name: Process README.md files
+      shell: bash
+      env:
+        DIRECTORIES: ${{ inputs.directories }}
+      run: |
+        MARKER="<!-- TFDOCS_EXTRAS_START -->"
+        PROCESSED=0
+        SKIPPED=0
+
+        while IFS= read -r dir; do
+          # Skip blank/whitespace-only lines
+          [ -z "$(echo "$dir" | tr -d '[:space:]')" ] && continue
+
+          readme="${dir}/README.md"
+
+          if [ ! -f "$readme" ]; then
+            echo "::notice::Skipping $dir: README.md not found"
+            SKIPPED=$((SKIPPED + 1))
+            continue
+          fi
+
+          if ! grep -qF "$MARKER" "$readme"; then
+            echo "::notice::Skipping $dir: README.md has no TFDOCS_EXTRAS_START marker"
+            SKIPPED=$((SKIPPED + 1))
+            continue
+          fi
+
+          echo "Processing: $dir"
+          "$TFDOCS_EXTRAS_BIN" "$dir"
+          PROCESSED=$((PROCESSED + 1))
+        done <<< "$DIRECTORIES"
+
+        echo "Done: processed $PROCESSED director(ies), skipped $SKIPPED"
