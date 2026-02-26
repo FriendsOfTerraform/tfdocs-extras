@@ -154,7 +154,7 @@ This project includes a rudimentary CLI tool that reads a Terraform module folde
 The tool accepts a single argument specifying the path to a Terraform module folder. It will read the module folder using Terraform Docs, parse the variable definitions using this library, and write the output to a `README.md` file in the module folder.
 
 ```bash
-./tfdocs-extra /path/to/TerraformModules/aws/route53
+./tfdocs-extras /path/to/TerraformModules/aws/route53
 ```
 
 The README requires specific markers to identify where to insert the generated documentation. The generated markdown will be inserted between the following markers:
@@ -163,6 +163,106 @@ The README requires specific markers to identify where to insert the generated d
 <!-- TFDOCS_EXTRAS_START -->
 
 <!-- TFDOCS_EXTRAS_END -->
+```
+
+### JSON Output
+
+Pass the `-json` flag to print a JSON representation of the parsed module manifest to stdout instead of updating the README. This is useful for piping the output into other tools or for debugging.
+
+```bash
+./tfdocs-extras -json /path/to/TerraformModules/aws/route53
+```
+
+## Usage as a GitHub Action
+
+This repository is also published as a GitHub Action. It automatically downloads the appropriate binary for the runner's OS and architecture, scans the specified directories for `README.md` files containing the `TFDOCS_EXTRAS_START` marker, and processes each one.
+
+```yaml
+- uses: FriendsOfTerraform/tfdocs-extras@main
+  with:
+    directories: |
+      ./modules/aws/vpc
+      ./modules/aws/s3
+```
+
+### Inputs
+
+| Input | Required | Default | Description |
+|---|---|---|---|
+| `directories` | Yes | | Newline-separated list of Terraform module directories to process. |
+| `version` | No | `latest` | Version of tfdocs-extras to download (e.g. `v0.1.0`). |
+| `token` | No | `github.token` | GitHub token used to download the release binary. |
+| `commit` | No | `false` (boolean) | Commit any README.md changes after processing. Mutually exclusive with `fail_on_diff`. |
+| `commit_message` | No | `chore: update tfdocs-extras documentation` | Commit message. Only used when `commit` is `true`. |
+| `commit_author` | No | `github-actions[bot] <github-actions[bot]@users.noreply.github.com>` | Commit author in `Name <email>` format. Only used when `commit` is `true`. |
+| `commit_branch` | No | Current branch | Branch to push the commit to. Only used when `commit` is `true`. |
+| `fail_on_diff` | No | `false` (boolean) | Exit with a non-zero status if any README.md files were modified. Mutually exclusive with `commit`. |
+
+### Outputs
+
+| Output | Description |
+|---|---|
+| `result` | JSON array of module manifests, one object per processed directory. |
+
+### Examples
+
+#### Auto-commit updated documentation
+
+Automatically regenerate and commit documentation whenever Terraform files change on the main branch.
+
+```yaml
+on:
+  push:
+    branches: [main]
+    paths: ['**.tf']
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: FriendsOfTerraform/tfdocs-extras@main
+        with:
+          directories: |
+            ./modules/aws/vpc
+            ./modules/aws/s3
+          commit: true
+          commit_author: 'github-actions[bot] <github-actions[bot]@users.noreply.github.com>'
+```
+
+#### Enforce up-to-date documentation in pull requests
+
+Fail the CI check if a pull request contains Terraform changes without updated documentation.
+
+```yaml
+on:
+  pull_request:
+    paths: ['**.tf']
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: FriendsOfTerraform/tfdocs-extras@main
+        with:
+          directories: |
+            ./modules/aws/vpc
+            ./modules/aws/s3
+          fail_on_diff: true
+```
+
+#### Use the JSON output in a downstream step
+
+```yaml
+- uses: actions/checkout@v4
+- uses: FriendsOfTerraform/tfdocs-extras@main
+  id: tfdocs
+  with:
+    directories: ./modules/aws/vpc
+- run: echo '${{ steps.tfdocs.outputs.result }}'
 ```
 
 ## Documentation Specification
