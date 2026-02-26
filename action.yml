@@ -21,6 +21,22 @@ inputs:
     description: 'GitHub token used to download the release binary and avoid API rate limits.'
     required: false
     default: ${{ github.token }}
+  commit:
+    description: 'Commit any README.md changes after processing.'
+    required: false
+    default: 'false'
+  commit_message:
+    description: 'Commit message to use when commit is true.'
+    required: false
+    default: 'chore: update tfdocs-extras documentation'
+  commit_author:
+    description: 'Author identity for the commit in "Name <email>" format. Only used when commit is true.'
+    required: false
+    default: 'github-actions[bot] <github-actions[bot]@users.noreply.github.com>'
+  commit_branch:
+    description: 'Branch to push the commit to. Only used when commit is true. Defaults to the current branch.'
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -103,3 +119,28 @@ runs:
         done <<< "$DIRECTORIES"
 
         echo "Done: processed $PROCESSED director(ies), skipped $SKIPPED"
+
+    - name: Commit changes
+      if: ${{ inputs.commit == 'true' }}
+      shell: bash
+      env:
+        COMMIT_MESSAGE: ${{ inputs.commit_message }}
+        COMMIT_AUTHOR: ${{ inputs.commit_author }}
+      run: |
+        if git diff --quiet; then
+          echo "No changes to commit"
+          exit 0
+        fi
+
+        AUTHOR_NAME="${COMMIT_AUTHOR% <*}"
+        AUTHOR_EMAIL="${COMMIT_AUTHOR#*<}"; AUTHOR_EMAIL="${AUTHOR_EMAIL%>}"
+        git config user.name "$AUTHOR_NAME"
+        git config user.email "$AUTHOR_EMAIL"
+        git add -u
+        git commit -m "$COMMIT_MESSAGE"
+
+        BRANCH="${{ inputs.commit_branch }}"
+        if [ -z "$BRANCH" ]; then
+          BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+        fi
+        git push origin "$BRANCH"
