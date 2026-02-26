@@ -53,7 +53,7 @@ runs:
     - name: Validate inputs
       shell: bash
       run: |
-        if [ "${{ inputs.commit }}" = "true" ] && [ "${{ inputs.fail_on_diff }}" = "true" ]; then
+        if ${{ fromJSON(inputs.commit) }} && ${{ fromJSON(inputs.fail_on_diff) }}; then
           echo "::error::commit and fail_on_diff are mutually exclusive"
           exit 1
         fi
@@ -151,7 +151,7 @@ runs:
         } >> "$GITHUB_OUTPUT"
 
     - name: Commit changes
-      if: ${{ inputs.commit == 'true' }}
+      if: ${{ fromJSON(inputs.commit) }}
       shell: bash
       env:
         COMMIT_MESSAGE: ${{ inputs.commit_message }}
@@ -176,7 +176,7 @@ runs:
         git push origin "$BRANCH"
 
     - name: Check for diff
-      if: ${{ inputs.fail_on_diff == 'true' }}
+      if: ${{ fromJSON(inputs.fail_on_diff) }}
       shell: bash
       run: |
         if ! git diff --quiet; then
