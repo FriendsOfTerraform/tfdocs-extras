@@ -42,6 +42,11 @@ inputs:
     required: false
     default: 'false'
 
+outputs:
+  result:
+    description: 'JSON array of module manifests, one object per processed directory.'
+    value: ${{ steps.collect-json.outputs.result }}
+
 runs:
   using: composite
   steps:
@@ -99,6 +104,7 @@ runs:
         echo "TFDOCS_EXTRAS_BIN=$DEST" >> "$GITHUB_ENV"
 
     - name: Process README.md files
+      id: collect-json
       shell: bash
       env:
         DIRECTORIES: ${{ inputs.directories }}
@@ -106,6 +112,7 @@ runs:
         MARKER="<!-- TFDOCS_EXTRAS_START -->"
         PROCESSED=0
         SKIPPED=0
+        JSON_ITEMS=""
 
         while IFS= read -r dir; do
           # Skip blank/whitespace-only lines
@@ -127,10 +134,21 @@ runs:
 
           echo "Processing: $dir"
           "$TFDOCS_EXTRAS_BIN" "$dir"
+
+          JSON=$("$TFDOCS_EXTRAS_BIN" -json "$dir")
+          [ -n "$JSON_ITEMS" ] && JSON_ITEMS+=","
+          JSON_ITEMS+="$JSON"
+
           PROCESSED=$((PROCESSED + 1))
         done <<< "$DIRECTORIES"
 
         echo "Done: processed $PROCESSED director(ies), skipped $SKIPPED"
+
+        {
+          echo 'result<<EOF'
+          echo "[${JSON_ITEMS}]"
+          echo 'EOF'
+        } >> "$GITHUB_OUTPUT"
 
     - name: Commit changes
       if: ${{ inputs.commit == 'true' }}
