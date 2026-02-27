@@ -177,19 +177,31 @@ Pass the `-json` flag to print a JSON representation of the parsed module manife
 
 This repository is also published as a GitHub Action. It automatically downloads the appropriate binary for the runner's OS and architecture, scans the specified directories for `README.md` files containing the `TFDOCS_EXTRAS_START` marker, and processes each one.
 
+Each entry in `directories` is either an explicit path or a glob pattern:
+
+| Pattern | Behavior |
+|---|---|
+| `./modules/aws/vpc` | Process this single directory. |
+| `./modules/aws/*` | Process every direct subdirectory of `aws/`. |
+| `./modules/**` | Recursively process all subdirectories. |
+
+Directories that do not contain a `README.md` with the `TFDOCS_EXTRAS_START` marker are silently skipped.
+
 ```yaml
 - uses: FriendsOfTerraform/tfdocs-extras@main
   with:
     directories: |
       ./modules/aws/vpc
       ./modules/aws/s3
+      ./modules/gcp/*
+      ./modules/azure/**
 ```
 
 ### Inputs
 
 | Input | Required | Default | Description |
 |---|---|---|---|
-| `directories` | Yes | | Newline-separated list of Terraform module directories to process. |
+| `directories` | Yes | | Newline-separated list of Terraform module directories to process. Supports `*` and `**` glob patterns. |
 | `version` | No | `latest` | Version of tfdocs-extras to download (e.g. `v0.1.0`). |
 | `token` | No | `github.token` | GitHub token used to download the release binary. |
 | `commit` | No | `false` (boolean) | Commit any README.md changes after processing. Mutually exclusive with `fail_on_diff`. |
@@ -251,6 +263,8 @@ jobs:
           directories: |
             ./modules/aws/vpc
             ./modules/aws/s3
+            ./modules/azure/*
+            ./modules/vault/*
           fail_on_diff: true
 ```
 

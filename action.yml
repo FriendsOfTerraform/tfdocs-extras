@@ -109,40 +109,38 @@ runs:
       env:
         DIRECTORIES: ${{ inputs.directories }}
       run: |
+        # globstar enables ** for recursive matching; nullglob silently drops
+        # patterns that match nothing rather than treating them as literals
+        shopt -s globstar nullglob
+
         MARKER="<!-- TFDOCS_EXTRAS_START -->"
         PROCESSED=0
-        SKIPPED=0
         JSON_ITEMS=""
 
-        while IFS= read -r dir; do
+        while IFS= read -r pattern; do
           # Skip blank/whitespace-only lines
-          [ -z "$(echo "$dir" | tr -d '[:space:]')" ] && continue
+          [ -z "$(echo "$pattern" | tr -d '[:space:]')" ] && continue
 
-          readme="${dir}/README.md"
+          # Unquoted expansion triggers glob/globstar resolution
+          for dir in $pattern; do
+            [ -d "$dir" ] || continue
 
-          if [ ! -f "$readme" ]; then
-            echo "::notice::Skipping $dir: README.md not found"
-            SKIPPED=$((SKIPPED + 1))
-            continue
-          fi
+            readme="${dir}/README.md"
+            [ -f "$readme" ] || continue
+            grep -qF "$MARKER" "$readme" || continue
 
-          if ! grep -qF "$MARKER" "$readme"; then
-            echo "::notice::Skipping $dir: README.md has no TFDOCS_EXTRAS_START marker"
-            SKIPPED=$((SKIPPED + 1))
-            continue
-          fi
+            echo "Processing: $dir"
+            "$TFDOCS_EXTRAS_BIN" "$dir"
 
-          echo "Processing: $dir"
-          "$TFDOCS_EXTRAS_BIN" "$dir"
+            JSON=$("$TFDOCS_EXTRAS_BIN" -json "$dir")
+            [ -n "$JSON_ITEMS" ] && JSON_ITEMS+=","
+            JSON_ITEMS+="$JSON"
 
-          JSON=$("$TFDOCS_EXTRAS_BIN" -json "$dir")
-          [ -n "$JSON_ITEMS" ] && JSON_ITEMS+=","
-          JSON_ITEMS+="$JSON"
-
-          PROCESSED=$((PROCESSED + 1))
+            PROCESSED=$((PROCESSED + 1))
+          done
         done <<< "$DIRECTORIES"
 
-        echo "Done: processed $PROCESSED director(ies), skipped $SKIPPED"
+        echo "Done: processed $PROCESSED director(ies)"
 
         {
           echo 'result<<EOF'
