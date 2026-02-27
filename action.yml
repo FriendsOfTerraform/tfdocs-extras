@@ -81,11 +81,29 @@ runs:
 
         # Resolve 'latest' to the actual version tag
         if [ "$VERSION" = "latest" ]; then
+          # Prefer the latest stable release; gh release view only returns a
+          # release marked "latest" on GitHub, which is never a pre-release.
           VERSION=$(gh release view \
             --repo FriendsOfTerraform/tfdocs-extras \
             --json tagName \
-            --jq '.tagName')
-          echo "Resolved latest version: $VERSION"
+            --jq '.tagName' 2>/dev/null) || true
+
+          if [ -z "$VERSION" ]; then
+            # No stable release exists; fall back to the most recent pre-release.
+            echo "No stable release found, checking for pre-releases..."
+            VERSION=$(gh release list \
+              --repo FriendsOfTerraform/tfdocs-extras \
+              --json tagName,isPrerelease \
+              --jq '[.[] | select(.isPrerelease)] | first | .tagName')
+
+            if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+              echo "::error::No stable release or pre-release found"
+              exit 1
+            fi
+            echo "Resolved latest pre-release: $VERSION"
+          else
+            echo "Resolved latest stable release: $VERSION"
+          fi
         fi
 
         # Build binary name matching the release asset naming convention
