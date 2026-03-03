@@ -94,14 +94,19 @@
     {{- template "table" .RequiredInputs}}
 {{end}}
 
+{{if gt (len .OptionalInputs.Rows) 0 -}}
 ### Optional
 
 {{template "table" .OptionalInputs}}
+{{end}}
 
+{{if gt (len .Outputs.Rows) 0 -}}
 ## Outputs
 
 {{template "table" .Outputs}}
+{{end}}
 
+{{if gt (len .Objects) 0}}
 ## Objects
 
 {{range $key, $input := .Objects}}
@@ -110,6 +115,7 @@
 
 {{template "table" $input}}
 
+{{end}}
 {{end}}
 
 {{range $key, $value := .ReferenceLinks}}
