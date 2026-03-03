@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	"github.com/terraform-docs/terraform-docs/terraform"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type MetadataAttribute struct {
@@ -179,8 +181,9 @@ func processDirectives(directives []DocDirective, manifest *ModuleManifest, data
 				metadata.RegexExamples = append(metadata.RegexExamples, attr.Parsed.Args[1:]...)
 			}
 		default:
+			caser := cases.Title(language.English)
 			metadata.Attributes = append(metadata.Attributes, MetadataAttribute{
-				Name:    attr.Name,
+				Name:    caser.String(attr.Name),
 				Content: attr.RawContent,
 			})
 		}
