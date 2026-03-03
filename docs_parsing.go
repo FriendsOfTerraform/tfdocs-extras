@@ -2,9 +2,6 @@ package tfdocextras
 
 import (
 	"strings"
-
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 // DocDirective represents a documentation directive like @since, @param, etc.
@@ -49,21 +46,6 @@ func extractObjectFromArg(arg *astDataType) []StructProperty {
 	}
 
 	return nil
-}
-
-func getObjectName(name string) string {
-	if name != "" {
-		caser := cases.Title(language.English)
-		parts := strings.Split(name, "_")
-
-		for i, part := range parts {
-			parts[i] = caser.String(part)
-		}
-
-		return strings.Join(parts, "")
-	}
-
-	return "UnknownObject"
 }
 
 func isObjectType(data astDataType) bool {
@@ -119,7 +101,7 @@ func handleObjectField(field *StructProperty, dataType astDataType) bool {
 }
 
 func parseNestedObject(field *StructProperty, obj *astObject) {
-	objectName := getObjectName(field.Name)
+	objectName := field.Name
 	field.Properties = parseObjectBlock(*obj)
 	field.DataTypeStr = "object(" + objectName + ")"
 	field.NestedDataType = &objectName
@@ -172,7 +154,7 @@ func parseCollectionOfObjects(field *StructProperty, fn *astFunction) bool {
 		return false
 	}
 
-	objectName := getObjectName(field.Name)
+	objectName := field.Name
 	field.Properties = parseObjectBlock(*fn.Args[0].Func.Args[0].Object)
 	field.DataTypeStr = fn.Name + "(object(" + objectName + "))"
 	field.NestedDataType = &objectName
@@ -421,7 +403,7 @@ func parseFieldType(field *StructProperty, value *astDataType) {
 
 // buildObjectTypeName constructs an object type string with optional prefix (map, list, etc.)
 func buildObjectTypeName(name, prefix string) string {
-	objectName := getObjectName(name)
+	objectName := name
 	objectType := "object(" + objectName + ")"
 
 	if prefix != "" {
@@ -457,7 +439,7 @@ func parseObjectFunctionBlock(fxn astFunction, name string) *DocumentedStruct {
 	if len(fxn.Args) > 0 {
 		if fields := extractObjectFromArg(fxn.Args[0]); fields != nil {
 			objGroup.Properties = fields
-			objectName := getObjectName(name)
+			objectName := name
 			objGroup.NestedDataType = &objectName
 			objGroup.DataTypeStr = buildObjectTypeName(name, collectionPrefix)
 		}

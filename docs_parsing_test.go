@@ -551,8 +551,8 @@ func TestParseIntoDocumentedStruct_ObjectWithDocStringComments(t *testing.T) {
 	expected := DocumentedStruct{
 		StructProperty: StructProperty{
 			Name:           "test_object",
-			DataTypeStr:    "object(TestObject)",
-			NestedDataType: strPtr("TestObject"),
+			DataTypeStr:    "object(test_object)",
+			NestedDataType: strPtr("test_object"),
 			Documentation: PropertyDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
@@ -612,8 +612,8 @@ func TestParseIntoDocumentedStruct_OptionalObject(t *testing.T) {
 			},
 			Optional:       true,
 			DefaultValue:   nil,
-			DataTypeStr:    "object(TestObject)",
-			NestedDataType: strPtr("TestObject"),
+			DataTypeStr:    "object(test_object)",
+			NestedDataType: strPtr("test_object"),
 			Properties: []StructProperty{
 				{
 					Documentation: PropertyDocBlock{
@@ -654,8 +654,8 @@ func TestParseIntoDocumentedStruct_OptionalObjectWithObject(t *testing.T) {
 	expected := DocumentedStruct{
 		StructProperty: StructProperty{
 			Name:           "user_profile",
-			DataTypeStr:    "object(UserProfile)",
-			NestedDataType: strPtr("UserProfile"),
+			DataTypeStr:    "object(user_profile)",
+			NestedDataType: strPtr("user_profile"),
 			Documentation: PropertyDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
@@ -679,8 +679,8 @@ func TestParseIntoDocumentedStruct_OptionalObjectWithObject(t *testing.T) {
 						Directives: []DocDirective{},
 					},
 					Name:           "address",
-					DataTypeStr:    "object(Address)",
-					NestedDataType: strPtr("Address"),
+					DataTypeStr:    "object(address)",
+					NestedDataType: strPtr("address"),
 					Optional:       false,
 					DefaultValue:   nil,
 					Properties: []StructProperty{
@@ -735,8 +735,8 @@ func TestParseIntoDocumentedStruct_MapOfObjects(t *testing.T) {
 	expected := DocumentedStruct{
 		StructProperty: StructProperty{
 			Name:           "instance_config",
-			DataTypeStr:    "map(object(InstanceConfig))",
-			NestedDataType: strPtr("InstanceConfig"),
+			DataTypeStr:    "map(object(instance_config))",
+			NestedDataType: strPtr("instance_config"),
 			Documentation: PropertyDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
@@ -786,8 +786,8 @@ func TestParseIntoDocumentedStruct_ListOfObjects(t *testing.T) {
 	expected := DocumentedStruct{
 		StructProperty: StructProperty{
 			Name:           "server_config",
-			DataTypeStr:    "list(object(ServerConfig))",
-			NestedDataType: strPtr("ServerConfig"),
+			DataTypeStr:    "list(object(server_config))",
+			NestedDataType: strPtr("server_config"),
 			Documentation: PropertyDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
@@ -852,8 +852,8 @@ func TestParseIntoDocumentedStruct_ObjectWithOptionalObject(t *testing.T) {
 	expected := DocumentedStruct{
 		StructProperty: StructProperty{
 			Name:           "root_object",
-			DataTypeStr:    "object(RootObject)",
-			NestedDataType: strPtr("RootObject"),
+			DataTypeStr:    "object(root_object)",
+			NestedDataType: strPtr("root_object"),
 			Documentation: PropertyDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
@@ -876,8 +876,8 @@ func TestParseIntoDocumentedStruct_ObjectWithOptionalObject(t *testing.T) {
 						Content:    []string{},
 						Directives: []DocDirective{},
 					},
-					DataTypeStr:    "object(EnableManagedScaling)",
-					NestedDataType: strPtr("EnableManagedScaling"),
+					DataTypeStr:    "object(enable_managed_scaling)",
+					NestedDataType: strPtr("enable_managed_scaling"),
 					Optional:       true,
 					DefaultValue:   nil,
 					Properties: []StructProperty{
@@ -944,8 +944,8 @@ func TestParseIntoDocumentedStruct_ObjectWithNestedObject(t *testing.T) {
 	expected := DocumentedStruct{
 		StructProperty: StructProperty{
 			Name:           "root_object",
-			DataTypeStr:    "object(RootObject)",
-			NestedDataType: strPtr("RootObject"),
+			DataTypeStr:    "object(root_object)",
+			NestedDataType: strPtr("root_object"),
 			Documentation: PropertyDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
@@ -968,8 +968,8 @@ func TestParseIntoDocumentedStruct_ObjectWithNestedObject(t *testing.T) {
 						Content:    []string{},
 						Directives: []DocDirective{},
 					},
-					DataTypeStr:    "object(EnableManagedScaling)",
-					NestedDataType: strPtr("EnableManagedScaling"),
+					DataTypeStr:    "object(enable_managed_scaling)",
+					NestedDataType: strPtr("enable_managed_scaling"),
 					Optional:       false,
 					DefaultValue:   nil,
 					Properties: []StructProperty{
@@ -1055,8 +1055,8 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 	expected := DocumentedStruct{
 		StructProperty: StructProperty{
 			Name:           "health_check_config",
-			DataTypeStr:    "list(object(HealthCheckConfig))",
-			NestedDataType: strPtr("HealthCheckConfig"),
+			DataTypeStr:    "list(object(health_check_config))",
+			NestedDataType: strPtr("health_check_config"),
 			Documentation: PropertyDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
@@ -1078,8 +1078,8 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 						Content:    []string{},
 						Directives: []DocDirective{},
 					},
-					DataTypeStr:    "object(HealthCheck)",
-					NestedDataType: strPtr("HealthCheck"),
+					DataTypeStr:    "object(health_check)",
+					NestedDataType: strPtr("health_check"),
 					Optional:       true,
 					DefaultValue:   strPtr("null"),
 					Properties: []StructProperty{
@@ -1109,8 +1109,8 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 								Content:    []string{},
 								Directives: []DocDirective{},
 							},
-							DataTypeStr:    "object(CalculatedCheck)",
-							NestedDataType: strPtr("CalculatedCheck"),
+							DataTypeStr:    "object(calculated_check)",
+							NestedDataType: strPtr("calculated_check"),
 							Optional:       true,
 							DefaultValue:   strPtr("null"),
 							Properties: []StructProperty{
@@ -1142,8 +1142,8 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 								Content:    []string{},
 								Directives: []DocDirective{},
 							},
-							DataTypeStr:    "object(CloudwatchAlarmCheck)",
-							NestedDataType: strPtr("CloudwatchAlarmCheck"),
+							DataTypeStr:    "object(cloudwatch_alarm_check)",
+							NestedDataType: strPtr("cloudwatch_alarm_check"),
 							Optional:       true,
 							DefaultValue:   strPtr("null"),
 							Properties: []StructProperty{
@@ -1175,8 +1175,8 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 								Content:    []string{},
 								Directives: []DocDirective{},
 							},
-							DataTypeStr:    "map(object(CloudwatchAlarms))",
-							NestedDataType: strPtr("CloudwatchAlarms"),
+							DataTypeStr:    "map(object(cloudwatch_alarms))",
+							NestedDataType: strPtr("cloudwatch_alarms"),
 							Optional:       true,
 							DefaultValue:   strPtr("{}"),
 							Properties: []StructProperty{
@@ -1208,8 +1208,8 @@ func TestParseIntoDocumentedStruct_DoubleNestedWithinOptional(t *testing.T) {
 								Content:    []string{},
 								Directives: []DocDirective{},
 							},
-							DataTypeStr:    "object(EndpointCheck)",
-							NestedDataType: strPtr("EndpointCheck"),
+							DataTypeStr:    "object(endpoint_check)",
+							NestedDataType: strPtr("endpoint_check"),
 							Optional:       true,
 							DefaultValue:   strPtr("null"),
 							Properties: []StructProperty{
@@ -1264,8 +1264,8 @@ func TestParseIntoDocumentedStruct_ObjectWithMapOfObjects(t *testing.T) {
 	expected := DocumentedStruct{
 		StructProperty: StructProperty{
 			Name:           "config_object",
-			DataTypeStr:    "object(ConfigObject)",
-			NestedDataType: strPtr("ConfigObject"),
+			DataTypeStr:    "object(config_object)",
+			NestedDataType: strPtr("config_object"),
 			Documentation: PropertyDocBlock{
 				Content:    []string{},
 				Directives: []DocDirective{},
@@ -1277,8 +1277,8 @@ func TestParseIntoDocumentedStruct_ObjectWithMapOfObjects(t *testing.T) {
 						Content:    []string{},
 						Directives: []DocDirective{},
 					},
-					DataTypeStr:    "map(object(Configurations))",
-					NestedDataType: strPtr("Configurations"),
+					DataTypeStr:    "map(object(configurations))",
+					NestedDataType: strPtr("configurations"),
 					Optional:       false,
 					DefaultValue:   nil,
 					Properties: []StructProperty{

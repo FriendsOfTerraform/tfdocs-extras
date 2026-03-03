@@ -132,13 +132,13 @@ func TestParseModuleArgsIntoManifest_OutputsWithComplexType(t *testing.T) {
 		t.Fatalf("Output rows count mismatch:\n%v", diff)
 	}
 
-	if _, exists := manifest.Objects["NatGateways"]; !exists {
-		t.Error("Expected NatGateways nested object to be recorded")
+	if _, exists := manifest.Objects["nat_gateways"]; !exists {
+		t.Error("Expected nat_gateways nested object to be recorded")
 	}
 
-	complexTypeStr := "NatGateways"
+	complexTypeStr := "nat_gateways"
 	expectedOutput := Argument{
-		Type:        "map(object(NatGateways))",
+		Type:        "map(object(nat_gateways))",
 		ComplexType: &complexTypeStr,
 		Name:        "nat_gateways",
 		Description: "Map of NAT gateways",
@@ -157,9 +157,9 @@ func TestParseModuleArgsIntoManifest_OutputsWithComplexType(t *testing.T) {
 		t.Errorf("Output mismatch:\n%v", diff)
 	}
 
-	natGatewaysObj := manifest.Objects["NatGateways"]
+	natGatewaysObj := manifest.Objects["nat_gateways"]
 	if diff := deep.Equal(len(natGatewaysObj.Rows), 2); diff != nil {
-		t.Errorf("NatGateways field count mismatch:\n%v", diff)
+		t.Errorf("nat_gateways field count mismatch:\n%v", diff)
 	}
 
 	expectedFields := []struct {
@@ -273,21 +273,21 @@ func TestParseModuleArgsIntoManifest_OutputsWithNestedObjects(t *testing.T) {
 		t.Fatalf("Output rows count mismatch:\n%v", diff)
 	}
 
-	expectedObjects := []string{"Config", "Server", "Database"}
+	expectedObjects := []string{"config", "server", "database"}
 	for _, objName := range expectedObjects {
 		if _, exists := manifest.Objects[objName]; !exists {
 			t.Errorf("Expected nested object '%s' to be recorded", objName)
 		}
 	}
 
-	configObj := manifest.Objects["Config"]
+	configObj := manifest.Objects["config"]
 	if diff := deep.Equal(len(configObj.Rows), 2); diff != nil {
-		t.Errorf("Config field count mismatch:\n%v", diff)
+		t.Errorf("config field count mismatch:\n%v", diff)
 	}
 
-	serverComplexType := "Server"
+	serverComplexType := "server"
 	expectedServerField := Argument{
-		Type:        "object(Server)",
+		Type:        "object(server)",
 		ComplexType: &serverComplexType,
 		Name:        "server",
 	}
@@ -300,9 +300,9 @@ func TestParseModuleArgsIntoManifest_OutputsWithNestedObjects(t *testing.T) {
 		t.Errorf("Server field mismatch:\n%v", diff)
 	}
 
-	databaseComplexType := "Database"
+	databaseComplexType := "database"
 	expectedDatabaseField := Argument{
-		Type:        "object(Database)",
+		Type:        "object(database)",
 		ComplexType: &databaseComplexType,
 		Name:        "database",
 	}
