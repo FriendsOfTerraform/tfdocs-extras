@@ -234,7 +234,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: FriendsOfTerraform/tfdocs-extras@main
         with:
           directories: |
@@ -257,7 +257,7 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: FriendsOfTerraform/tfdocs-extras@main
         with:
           directories: |
@@ -271,7 +271,7 @@ jobs:
 #### Use the JSON output in a downstream step
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: actions/checkout@v6
 - uses: FriendsOfTerraform/tfdocs-extras@main
   id: tfdocs
   with:
