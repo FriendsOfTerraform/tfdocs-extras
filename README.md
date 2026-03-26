@@ -209,12 +209,13 @@ Directories that do not contain a `README.md` with the `TFDOCS_EXTRAS_START` mar
 | `commit_author` | No | `github-actions[bot] <github-actions[bot]@users.noreply.github.com>` | Commit author in `Name <email>` format. Only used when `commit` is `true`. |
 | `commit_branch` | No | Current branch | Branch to push the commit to. Only used when `commit` is `true`. |
 | `fail_on_diff` | No | `false` (boolean) | Exit with a non-zero status if any README.md files were modified. Mutually exclusive with `commit`. |
+| `json_output_file` | No | | Path to write the aggregated JSON output. Use this for large outputs that exceed GitHub Actions' output size limit. |
 
 ### Outputs
 
 | Output | Description |
 |---|---|
-| `result` | JSON array of module manifests, one object per processed directory. |
+| `result` | JSON array of module manifests, one object per processed directory. Only set if the total size is below ~1MB (GitHub Actions output limit). For larger outputs, use the `json_output_file` input to write to a file instead. |
 
 ### Examples
 
@@ -277,6 +278,24 @@ jobs:
   with:
     directories: ./modules/aws/vpc
 - run: echo '${{ steps.tfdocs.outputs.result }}'
+```
+
+#### Write JSON output to a file for large module sets
+
+When processing many modules or modules with large manifests, the aggregated JSON may exceed GitHub Actions' output size limit (~1MB). Use `json_output_file` to write the output to a file instead.
+
+```yaml
+- uses: actions/checkout@v6
+- uses: FriendsOfTerraform/tfdocs-extras@main
+  with:
+    directories: |
+      ./modules/**
+    json_output_file: ./tfdocs-manifests.json
+- name: Upload manifest
+  uses: actions/upload-artifact@v4
+  with:
+    name: tfdocs-manifests
+    path: ./tfdocs-manifests.json
 ```
 
 ## Documentation Specification

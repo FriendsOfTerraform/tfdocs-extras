@@ -41,6 +41,10 @@ inputs:
     description: 'Exit with a non-zero status if any README.md files were modified. Mutually exclusive with commit.'
     required: false
     default: 'false'
+  json_output_file:
+    description: 'Path to write the aggregated JSON output. If not specified, JSON is only written to the step output (subject to size limits).'
+    required: false
+    default: ''
 
 outputs:
   result:
@@ -126,12 +130,14 @@ runs:
       shell: bash
       env:
         DIRECTORIES: ${{ inputs.directories }}
+        JSON_OUTPUT_FILE: ${{ inputs.json_output_file }}
       run: |
         # globstar enables ** for recursive matching; nullglob silently drops
         # patterns that match nothing rather than treating them as literals
         shopt -s globstar nullglob
 
-        MARKER="<!-- TFDOCS_EXTRAS_START -->"
+        MARKER_START="<!-- TFDOCS_EXTRAS_START -->"
+        MARKER_END="<!-- TFDOCS_EXTRAS_END -->"
         PROCESSED=0
         JSON_ITEMS=""
 
@@ -145,7 +151,8 @@ runs:
 
             readme="${dir}/README.md"
             [ -f "$readme" ] || continue
-            grep -qF "$MARKER" "$readme" || continue
+            grep -qF "$MARKER_START" "$readme" || continue
+            grep -qF "$MARKER_END" "$readme" || continue
 
             echo "Processing: $dir"
             "$TFDOCS_EXTRAS_BIN" "$dir"
@@ -160,11 +167,29 @@ runs:
 
         echo "Done: processed $PROCESSED director(ies)"
 
-        {
-          echo 'result<<EOF'
-          echo "[${JSON_ITEMS}]"
-          echo 'EOF'
-        } >> "$GITHUB_OUTPUT"
+        # Build the final JSON array
+        FINAL_JSON="[${JSON_ITEMS}]"
+
+        # Write to file if path is specified
+        if [ -n "$JSON_OUTPUT_FILE" ]; then
+          echo "Writing JSON output to: $JSON_OUTPUT_FILE"
+          echo "$FINAL_JSON" > "$JSON_OUTPUT_FILE"
+        fi
+
+        # GitHub Actions outputs have a size limit of ~1MB. Only set the output
+        # if the JSON is below this threshold.
+        JSON_SIZE=${#FINAL_JSON}
+        MAX_OUTPUT_SIZE=1000000  # ~1MB
+
+        if [ $JSON_SIZE -lt $MAX_OUTPUT_SIZE ]; then
+          {
+            echo 'result<<EOF'
+            echo "$FINAL_JSON"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+        else
+          echo "::warning::JSON output size ($JSON_SIZE bytes) exceeds GitHub Actions output limit (~1MB). Output not set. Use json_output_file input to write to a file instead."
+        fi
 
     - name: Commit changes
       if: ${{ fromJSON(inputs.commit) }}
@@ -185,10 +210,19 @@ runs:
         git add -u
         git commit -m "$COMMIT_MESSAGE"
 
-        BRANCH="${{ inputs.commit_branch }}"
-        if [ -z "$BRANCH" ]; then
-          BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+        BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+        if [ "$BRANCH" = "HEAD" ]; then
+          # Detached HEAD; try to derive a branch name from GitHub context
+          if [ -n "${{ github.head_ref }}" ]; then
+            BRANCH="${{ github.head_ref }}"
+          elif [ -n "${{ github.ref_name }}" ]; then
+            BRANCH="${{ github.ref_name }}"
+          else
+            echo "::error::Cannot determine branch to push to (detached HEAD and no commit_branch, github.head_ref, or github.ref_name)"
+            exit 1
+          fi
         fi
+
         git push origin "$BRANCH"
 
     - name: Check for diff
