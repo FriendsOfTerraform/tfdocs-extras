@@ -72,6 +72,10 @@ runs:
         GH_TOKEN: ${{ inputs.token || github.token }}
         VERSION: ${{ inputs.version }}
       run: |
+        if [ "${{ runner.debug }}" = "1" ]; then
+          set -x
+        fi
+
         # Detect OS
         case "${{ runner.os }}" in
           Linux)   BINARY_OS="linux" ;;
