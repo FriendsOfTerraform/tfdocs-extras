@@ -2,9 +2,7 @@ name: Continuous Integration
 
 on:
   push:
-    branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
 
 jobs:
   build:
@@ -25,3 +23,48 @@ jobs:
 
       - name: Test
         run: make test
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Format code
+        run: make fmt
+
+      - name: Check if code is formatted
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "::error::Code is not formatted. Please run 'make fmt' and commit the changes."
+            git --no-pager diff
+            exit 1
+          fi
+
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      issues: write
+      pull-requests: write
+      statuses: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Super-linter
+        uses: super-linter/super-linter@v8.5.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_CHECKOV: true
+          VALIDATE_GITHUB_ACTIONS: true
+          VALIDATE_GITHUB_ACTIONS_ZIZMOR: true
+          VALIDATE_GITLEAKS: true
+          VALIDATE_GIT_MERGE_CONFLICT_MARKERS: true
+          VALIDATE_GO: true
+          VALIDATE_MARKDOWN: true
+          VALIDATE_YAML: true
+          VALIDATE_YAML_PRETTIER: true
