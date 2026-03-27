@@ -1,7 +1,7 @@
 > [!WARNING]
 >
 > This library is currently in beta but stable; the API is subject to change before its first stable release. Please help us finalize the API by providing feedback in the [issues](https://github.com/FriendsOfTerraform/tfdocs-extras/issues) section or [our PR in the modules repository][fot-modules-pr].
- 
+
 # Terraform Documentation Extras (tfdocs-extras)
 
 [![GitHub Release](https://img.shields.io/github/v/release/FriendsOfTerraform/tfdocs-extras?include_prereleases)](https://github.com/FriendsOfTerraform/tfdocs-extras/releases/latest) [![GitHub License](https://img.shields.io/github/license/FriendsOfTerraform/tfdocs-extras)](/LICENSE) [![Continuous Integration](https://github.com/FriendsOfTerraform/tfdocs-extras/actions/workflows/ci.yml/badge.svg)](https://github.com/FriendsOfTerraform/tfdocs-extras/actions/workflows/ci.yml)
@@ -148,7 +148,7 @@ This project includes a rudimentary CLI tool that reads a Terraform module folde
 [Download the latest build from GitHub](https://github.com/FriendsOfTerraform/tfdocs-extras/releases/latest)
 
 > [!IMPORTANT]
-> 
+>
 > This CLI tool is not intended to be a replacement for Terraform Docs and will become obsolete once its functionality is integrated into Terraform Docs either as a plugin or built-in feature.
 
 The tool accepts a single argument specifying the path to a Terraform module folder. It will read the module folder using Terraform Docs, parse the variable definitions using this library, and write the output to a `README.md` file in the module folder.
@@ -301,7 +301,7 @@ When processing many modules or modules with large manifests, the aggregated JSO
 ## Documentation Specification
 
 > [!IMPORTANT]
-> 
+>
 > This library is currently in beta, and this specification is subject to change before the first stable release.
 
 The goal of this library is to support Terraform module creators to document their nested variables inline using comments instead of needing to maintain the documentation separately. We introduce two main features:

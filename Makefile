@@ -1,4 +1,4 @@
-.PHONY: help build test coverage clean fmt deps
+.PHONY: help build test coverage clean fmt deps lint
 
 # Variables
 GO := go
@@ -7,6 +7,7 @@ BINARY_NAME := tfdocs-extras
 BIN_DIR := bin
 COVERAGE_FILE := coverage.out
 COVERAGE_HTML := coverage.html
+SUPER_LINTER_VERSION := v8.5.0
 
 # Default target
 help:
@@ -17,6 +18,7 @@ help:
 	@echo "  make clean           - Remove build artifacts"
 	@echo "  make fmt             - Format code"
 	@echo "  make deps            - Download dependencies"
+	@echo "  make lint            - Run super-linter locally (fix mode)"
 	@echo "  make all             - Build and test"
 
 build:
@@ -45,3 +47,12 @@ deps:
 
 all: fmt test build
 	@echo "Build and test completed successfully!"
+
+lint:
+	@docker run --rm \
+	  -e RUN_LOCAL=true \
+	  -e DEFAULT_BRANCH=main \
+	  -e FIX_MODE=true \
+	  --env-file ".github/super-linter.env" \
+	  -v "$$(pwd)":/tmp/lint \
+	  ghcr.io/super-linter/super-linter:$(SUPER_LINTER_VERSION)

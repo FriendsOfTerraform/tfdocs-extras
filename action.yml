@@ -1,10 +1,10 @@
-name: 'tfdocs-extras'
-description: 'Generate Terraform object() type documentation in README.md files using tfdocs-extras'
+name: "tfdocs-extras"
+description: "Generate Terraform object() type documentation in README.md files using tfdocs-extras"
 author: 'Vladimir "allejo" Jimenez'
 
 branding:
-  icon: 'book-open'
-  color: 'purple'
+  icon: "book-open"
+  color: "purple"
 
 inputs:
   directories:
@@ -16,39 +16,39 @@ inputs:
   version:
     description: 'Version of tfdocs-extras to download (e.g. "v0.1.0"). Defaults to the latest release.'
     required: false
-    default: 'latest'
+    default: "latest"
   token:
-    description: 'GitHub token used to download the release binary and avoid API rate limits.'
+    description: "GitHub token used to download the release binary and avoid API rate limits."
     required: false
     default: ${{ github.token }}
   commit:
-    description: 'Commit any README.md changes after processing.'
+    description: "Commit any README.md changes after processing."
     required: false
-    default: 'false'
+    default: "false"
   commit_message:
-    description: 'Commit message to use when commit is true.'
+    description: "Commit message to use when commit is true."
     required: false
-    default: 'chore: update tfdocs-extras documentation'
+    default: "chore: update tfdocs-extras documentation"
   commit_author:
     description: 'Author identity for the commit in "Name <email>" format. Only used when commit is true.'
     required: false
-    default: 'github-actions[bot] <github-actions[bot]@users.noreply.github.com>'
+    default: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
   commit_branch:
-    description: 'Branch to push the commit to. Only used when commit is true. Defaults to the current branch.'
+    description: "Branch to push the commit to. Only used when commit is true. Defaults to the current branch."
     required: false
-    default: ''
+    default: ""
   fail_on_diff:
-    description: 'Exit with a non-zero status if any README.md files were modified. Mutually exclusive with commit.'
+    description: "Exit with a non-zero status if any README.md files were modified. Mutually exclusive with commit."
     required: false
-    default: 'false'
+    default: "false"
   json_output_file:
-    description: 'Path to write the aggregated JSON output. If not specified, JSON is only written to the step output (subject to size limits).'
+    description: "Path to write the aggregated JSON output. If not specified, JSON is only written to the step output (subject to size limits)."
     required: false
-    default: ''
+    default: ""
 
 outputs:
   result:
-    description: 'JSON array of module manifests, one object per processed directory.'
+    description: "JSON array of module manifests, one object per processed directory."
     value: ${{ steps.collect-json.outputs.result }}
 
 runs:
@@ -63,6 +63,7 @@ runs:
         fi
 
     - name: Download tfdocs-extras
+      id: tfdocs-extras-bin
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.token }}
@@ -123,7 +124,7 @@ runs:
           --output "$DEST"
         chmod +x "$DEST"
 
-        echo "TFDOCS_EXTRAS_BIN=$DEST" >> "$GITHUB_ENV"
+        echo "bin=$DEST" >> "$GITHUB_OUTPUT"
 
     - name: Process README.md files
       id: collect-json
@@ -131,6 +132,7 @@ runs:
       env:
         DIRECTORIES: ${{ inputs.directories }}
         JSON_OUTPUT_FILE: ${{ inputs.json_output_file }}
+        TFDOCS_EXTRAS_BIN: ${{ steps.tfdocs-extras-bin.outputs.bin }}
       run: |
         # globstar enables ** for recursive matching; nullglob silently drops
         # patterns that match nothing rather than treating them as literals
@@ -200,6 +202,8 @@ runs:
         COMMIT_MESSAGE: ${{ inputs.commit_message }}
         COMMIT_AUTHOR: ${{ inputs.commit_author }}
         COMMIT_BRANCH: ${{ inputs.commit_branch }}
+        GH_HEAD_REF: ${{ github.head_ref }}
+        GH_REF_NAME: ${{ github.ref_name }}
       run: |
         if git diff --quiet; then
           echo "No changes to commit"
@@ -219,10 +223,10 @@ runs:
           BRANCH="$(git rev-parse --abbrev-ref HEAD)"
           if [ "$BRANCH" = "HEAD" ]; then
             # Detached HEAD; try to derive a branch name from GitHub context
-            if [ -n "${{ github.head_ref }}" ]; then
-              BRANCH="${{ github.head_ref }}"
-            elif [ -n "${{ github.ref_name }}" ]; then
-              BRANCH="${{ github.ref_name }}"
+            if [ -n "${GH_HEAD_REF}" ]; then
+              BRANCH="${GH_HEAD_REF}"
+            elif [ -n "${GH_REF_NAME}" ]; then
+              BRANCH="${GH_REF_NAME}"
             else
               echo "::error::Cannot determine branch to push to (detached HEAD and no commit_branch, github.head_ref, or github.ref_name)"
               exit 1
