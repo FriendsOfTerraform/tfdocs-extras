@@ -95,22 +95,26 @@ runs:
         if [ "$VERSION" = "latest" ]; then
           # Prefer the latest stable release; gh release view only returns a
           # release marked "latest" on GitHub, which is never a pre-release.
+          set +e
           VERSION=$(gh release view \
             --repo FriendsOfTerraform/tfdocs-extras \
             --json tagName \
             --jq '.tagName' 2>&1)
           EXIT_CODE=$?
+          set -e
 
           if [ $EXIT_CODE -ne 0 ]; then
             # Check if this is just "no release found" vs an actual error
             if echo "$VERSION" | grep -qE "(release not found|no releases found)"; then
               # No stable release exists; fall back to the most recent pre-release.
               echo "No stable release found, checking for pre-releases..."
+              set +e
               VERSION=$(gh release list \
                 --repo FriendsOfTerraform/tfdocs-extras \
                 --json tagName,isPrerelease \
                 --jq '[.[] | select(.isPrerelease)] | first | .tagName' 2>&1)
               EXIT_CODE2=$?
+              set -e
 
               if [ $EXIT_CODE2 -ne 0 ]; then
                 echo "::error::Failed to list releases: $VERSION" >&2
