@@ -1,0 +1,288 @@
+name: "tfdocs-extras"
+description: "Generate Terraform object() type documentation in README.md files using tfdocs-extras"
+author: 'Vladimir "allejo" Jimenez'
+
+branding:
+  icon: "book-open"
+  color: "purple"
+
+inputs:
+  directories:
+    description: |
+      Newline-separated list of Terraform module directories to process. Each directory
+      will be checked for a README.md containing TFDOCS_EXTRAS_START/TFDOCS_EXTRAS_END
+      markers and processed if found.
+    required: true
+  version:
+    description: 'Version of tfdocs-extras to download (e.g. "v0.1.0"). Defaults to the latest release.'
+    required: false
+    default: "latest"
+  token:
+    description: |
+      GitHub token used to download the release binary, avoid API rate limits, and authenticate git operations.
+      Required if commit is true and actions/checkout is used with persist-credentials: false (recommended for security).
+      Defaults to github.token if not provided.
+    required: false
+    default: ""
+  commit:
+    description: "Commit any README.md changes after processing."
+    required: false
+    default: "false"
+  commit_message:
+    description: "Commit message to use when commit is true."
+    required: false
+    default: "chore: update tfdocs-extras documentation"
+  commit_author:
+    description: 'Author identity for the commit in "Name <email>" format. Only used when commit is true.'
+    required: false
+    default: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+  commit_branch:
+    description: "Branch to push the commit to. Only used when commit is true. Defaults to the current branch."
+    required: false
+    default: ""
+  fail_on_diff:
+    description: "Exit with a non-zero status if any README.md files were modified. Mutually exclusive with commit."
+    required: false
+    default: "false"
+  json_output_file:
+    description: "Path to write the aggregated JSON output. If not specified, JSON is only written to the step output (subject to size limits)."
+    required: false
+    default: ""
+
+outputs:
+  result:
+    description: "JSON array of module manifests, one object per processed directory."
+    value: ${{ steps.collect-json.outputs.result }}
+
+runs:
+  using: composite
+  steps:
+    - name: Validate inputs
+      shell: bash
+      run: |
+        if ${{ fromJSON(inputs.commit) }} && ${{ fromJSON(inputs.fail_on_diff) }}; then
+          echo "::error::commit and fail_on_diff are mutually exclusive"
+          exit 1
+        fi
+
+    - name: Download tfdocs-extras
+      id: tfdocs-extras-bin
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token || github.token }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        if [ "${{ runner.debug }}" = "1" ]; then
+          set -x
+        fi
+
+        # Detect OS
+        case "${{ runner.os }}" in
+          Linux)   BINARY_OS="linux" ;;
+          macOS)   BINARY_OS="darwin" ;;
+          Windows) BINARY_OS="windows" ;;
+          *) echo "::error::Unsupported OS: ${{ runner.os }}"; exit 1 ;;
+        esac
+
+        # Detect architecture
+        case "${{ runner.arch }}" in
+          X64)   BINARY_ARCH="amd64" ;;
+          ARM64) BINARY_ARCH="arm64" ;;
+          *) echo "::error::Unsupported architecture: ${{ runner.arch }}"; exit 1 ;;
+        esac
+
+        # Resolve 'latest' to the actual version tag
+        if [ "$VERSION" = "latest" ]; then
+          # Prefer the latest stable release; gh release view only returns a
+          # release marked "latest" on GitHub, which is never a pre-release.
+          set +e
+          VERSION=$(gh release view \
+            --repo FriendsOfTerraform/tfdocs-extras \
+            --json tagName \
+            --jq '.tagName' 2>&1)
+          EXIT_CODE=$?
+          set -e
+
+          if [ $EXIT_CODE -ne 0 ]; then
+            # Check if this is just "no release found" vs an actual error
+            if echo "$VERSION" | grep -qE "(release not found|no releases found)"; then
+              # No stable release exists; fall back to the most recent pre-release.
+              echo "No stable release found, checking for pre-releases..."
+              set +e
+              VERSION=$(gh release list \
+                --repo FriendsOfTerraform/tfdocs-extras \
+                --json tagName,isPrerelease \
+                --jq '[.[] | select(.isPrerelease)] | first | .tagName' 2>&1)
+              EXIT_CODE2=$?
+              set -e
+
+              if [ $EXIT_CODE2 -ne 0 ]; then
+                echo "::error::Failed to list releases: $VERSION" >&2
+                exit 1
+              fi
+
+              if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+                echo "::error::No stable release or pre-release found" >&2
+                exit 1
+              fi
+              echo "Resolved latest pre-release: $VERSION"
+            else
+              # This is a real error (auth, rate limit, network, etc.)
+              echo "::error::Failed to fetch latest release: $VERSION" >&2
+              exit 1
+            fi
+          else
+            echo "Resolved latest stable release: $VERSION"
+          fi
+        fi
+
+        # Build binary name matching the release asset naming convention
+        EXT=""
+        [ "$BINARY_OS" = "windows" ] && EXT=".exe"
+        BINARY_NAME="tfdocs-extras-${VERSION}-${BINARY_OS}-${BINARY_ARCH}${EXT}"
+        DEST="${RUNNER_TEMP}/tfdocs-extras${EXT}"
+
+        echo "Downloading $BINARY_NAME..."
+        gh release download "$VERSION" \
+          --repo FriendsOfTerraform/tfdocs-extras \
+          --pattern "$BINARY_NAME" \
+          --output "$DEST"
+        chmod +x "$DEST"
+
+        echo "bin=$DEST" >> "$GITHUB_OUTPUT"
+
+    - name: Process README.md files
+      id: collect-json
+      shell: bash
+      env:
+        DIRECTORIES: ${{ inputs.directories }}
+        JSON_OUTPUT_FILE: ${{ inputs.json_output_file }}
+        TFDOCS_EXTRAS_BIN: ${{ steps.tfdocs-extras-bin.outputs.bin }}
+      run: |
+        # globstar enables ** for recursive matching; nullglob silently drops
+        # patterns that match nothing rather than treating them as literals
+        shopt -s globstar nullglob
+
+        MARKER_START="<!-- TFDOCS_EXTRAS_START -->"
+        MARKER_END="<!-- TFDOCS_EXTRAS_END -->"
+        PROCESSED=0
+        JSON_ITEMS=""
+
+        while IFS= read -r pattern; do
+          # Skip blank/whitespace-only lines
+          [ -z "$(echo "$pattern" | tr -d '[:space:]')" ] && continue
+
+          # Expand the pattern into an array using compgen/mapfile so paths with spaces are preserved
+          mapfile -t dirs < <(compgen -G -- "$pattern")
+          # If the pattern didn't match anything, skip to the next pattern
+          [ "${#dirs[@]}" -eq 0 ] && continue
+
+          for dir in "${dirs[@]}"; do
+            [ -d "$dir" ] || continue
+
+            readme="${dir}/README.md"
+            [ -f "$readme" ] || continue
+            grep -qE "^[[:space:]]*$MARKER_START[[:space:]]*$" "$readme" || continue
+            grep -qE "^[[:space:]]*$MARKER_END[[:space:]]*$" "$readme" || continue
+
+            echo "Processing: $dir"
+            if ! "$TFDOCS_EXTRAS_BIN" "$dir"; then
+              echo "Error: tfdocs-extras failed while processing directory: $dir" >&2
+              exit 1
+            fi
+
+            if ! JSON=$("$TFDOCS_EXTRAS_BIN" -json "$dir"); then
+              echo "Error: tfdocs-extras -json failed while processing directory: $dir" >&2
+              exit 1
+            fi
+            [ -n "$JSON_ITEMS" ] && JSON_ITEMS+=","
+            JSON_ITEMS+="$JSON"
+
+            PROCESSED=$((PROCESSED + 1))
+          done
+        done <<< "$DIRECTORIES"
+
+        echo "Done: processed $PROCESSED directories"
+
+        # Build the final JSON array
+        FINAL_JSON="[${JSON_ITEMS}]"
+
+        # Write to file if path is specified
+        if [ -n "$JSON_OUTPUT_FILE" ]; then
+          echo "Writing JSON output to: $JSON_OUTPUT_FILE"
+          JSON_OUTPUT_DIR=$(dirname "$JSON_OUTPUT_FILE")
+          mkdir -p "$JSON_OUTPUT_DIR"
+          echo "$FINAL_JSON" > "$JSON_OUTPUT_FILE"
+        fi
+
+        # GitHub Actions outputs have a size limit of ~1MB. Only set the output
+        # if the JSON is below this threshold.
+        JSON_SIZE=${#FINAL_JSON}
+        MAX_OUTPUT_SIZE=1000000  # ~1MB
+
+        if [ $JSON_SIZE -lt $MAX_OUTPUT_SIZE ]; then
+          {
+            echo 'result<<EOF'
+            echo "$FINAL_JSON"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+        else
+          echo "::warning::JSON output size ($JSON_SIZE bytes) exceeds GitHub Actions output limit (~1MB). Output not set. Use json_output_file input to write to a file instead."
+        fi
+
+    - name: Commit changes
+      if: ${{ fromJSON(inputs.commit) }}
+      shell: bash
+      env:
+        COMMIT_MESSAGE: ${{ inputs.commit_message }}
+        COMMIT_AUTHOR: ${{ inputs.commit_author }}
+        COMMIT_BRANCH: ${{ inputs.commit_branch }}
+        GH_HEAD_REF: ${{ github.head_ref }}
+        GH_REF_NAME: ${{ github.ref_name }}
+        GH_TOKEN: ${{ inputs.token || github.token }}
+      run: |
+        if git diff --quiet; then
+          echo "No changes to commit"
+          exit 0
+        fi
+
+        AUTHOR_NAME="${COMMIT_AUTHOR% <*}"
+        AUTHOR_EMAIL="${COMMIT_AUTHOR#*<}"; AUTHOR_EMAIL="${AUTHOR_EMAIL%>}"
+        git config user.name "$AUTHOR_NAME"
+        git config user.email "$AUTHOR_EMAIL"
+        git add -u
+        git commit -m "$COMMIT_MESSAGE"
+
+        if [ -n "$COMMIT_BRANCH" ]; then
+          BRANCH="$COMMIT_BRANCH"
+        else
+          BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+          if [ "$BRANCH" = "HEAD" ]; then
+            # Detached HEAD; try to derive a branch name from GitHub context
+            if [ -n "${GH_HEAD_REF}" ]; then
+              BRANCH="${GH_HEAD_REF}"
+            elif [ -n "${GH_REF_NAME}" ]; then
+              BRANCH="${GH_REF_NAME}"
+            else
+              echo "::error::Cannot determine branch to push to (detached HEAD and no commit_branch, github.head_ref, or github.ref_name)"
+              exit 1
+            fi
+          fi
+        fi
+
+        # Configure git authentication using the token. This ensures git push works
+        # even when actions/checkout is used with persist-credentials: false.
+        if [ -n "$GH_TOKEN" ]; then
+          git config --local url."https://${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
+        fi
+
+        git push origin "$BRANCH"
+
+    - name: Check for diff
+      if: ${{ fromJSON(inputs.fail_on_diff) }}
+      shell: bash
+      run: |
+        if ! git diff --quiet; then
+          echo "::error::README.md files have uncommitted changes after processing"
+          exit 1
+        fi

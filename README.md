@@ -1,12 +1,12 @@
-> [!WARNING]
->
-> This library is currently in beta but stable; the API is subject to change before its first stable release. Please help us finalize the API by providing feedback in the [issues](https://github.com/FriendsOfTerraform/tfdocs-extras/issues) section or [our PR in the modules repository][fot-modules-pr].
- 
 # Terraform Documentation Extras (tfdocs-extras)
 
 [![GitHub Release](https://img.shields.io/github/v/release/FriendsOfTerraform/tfdocs-extras?include_prereleases)](https://github.com/FriendsOfTerraform/tfdocs-extras/releases/latest) [![GitHub License](https://img.shields.io/github/license/FriendsOfTerraform/tfdocs-extras)](/LICENSE) [![Continuous Integration](https://github.com/FriendsOfTerraform/tfdocs-extras/actions/workflows/ci.yml/badge.svg)](https://github.com/FriendsOfTerraform/tfdocs-extras/actions/workflows/ci.yml)
 
-A Go library for parsing an `object()` Terraform type definition string into a documented structure.  Support for [documenting nested objects has been a feature request dating back to April 2020](https://github.com/terraform-docs/terraform-docs/issues/242). The biggest challenge is that [Terraform Docs](https://github.com/terraform-docs/terraform-docs) does not parse the `object()` type definition itself and returns it as a raw string; this library fills that gap.
+> [!WARNING]
+>
+> This library is currently in beta but stable; the API is subject to change before its first stable release. Please help us finalize the API by providing feedback in the [issues](https://github.com/FriendsOfTerraform/tfdocs-extras/issues) section or [our PR in the modules repository][fot-modules-pr].
+
+A Go library for parsing an `object()` Terraform type definition string into a documented structure. Support for [documenting nested objects has been a feature request dating back to April 2020](https://github.com/terraform-docs/terraform-docs/issues/242). The biggest challenge is that [Terraform Docs](https://github.com/terraform-docs/terraform-docs) does not parse the `object()` type definition itself and returns it as a raw string; this library fills that gap.
 
 This repository houses a Go library that can parse a Terraform `object()` type definition string (including nested objects) into a structured representation that includes field names, types, optional status, default values, and parsed documentation (including support for doc directives like `@since`, `@example`, etc.). Additionally, it houses a simple CLI tool that uses this project's API for reading a Terraform variable file and outputting the parsed documentation in a GitHub-friendly Markdown format.
 
@@ -97,16 +97,16 @@ func main() {
         /// The name of the configuration
         /// @since 1.0.0
         name = string
-        
+
         /// The port number
         /// @since 1.0.0
         port = optional(number, 8080)
-        
+
         /// Nested configuration settings
         settings = optional(object({
             /// Enable debug mode
             debug = bool
-            
+
             /// Timeout in seconds
             timeout = number
         }))
@@ -121,14 +121,14 @@ func main() {
     // Access the parsed structure
     fmt.Printf("Type: %s\n", documented.DataTypeStr)
     fmt.Printf("Nested Type: %s\n", *documented.NestedDataType)
-    
+
     // Iterate through fields
     for _, field := range documented.Properties {
         fmt.Printf("\nField: %s\n", field.Name)
         fmt.Printf("  Type: %s\n", field.DataTypeStr)
         fmt.Printf("  Optional: %v\n", field.Optional)
         fmt.Printf("  Description: %s\n", strings.Join(field.Documentation.Content, " "))
-        
+
         // Access directives
         for _, directive := range field.Documentation.Directives {
             fmt.Printf("  @%s: %s\n", directive.Name, directive.RawContent)
@@ -148,27 +148,160 @@ This project includes a rudimentary CLI tool that reads a Terraform module folde
 [Download the latest build from GitHub](https://github.com/FriendsOfTerraform/tfdocs-extras/releases/latest)
 
 > [!IMPORTANT]
-> 
+>
 > This CLI tool is not intended to be a replacement for Terraform Docs and will become obsolete once its functionality is integrated into Terraform Docs either as a plugin or built-in feature.
 
 The tool accepts a single argument specifying the path to a Terraform module folder. It will read the module folder using Terraform Docs, parse the variable definitions using this library, and write the output to a `README.md` file in the module folder.
 
 ```bash
-./tfdocs-extra /path/to/TerraformModules/aws/route53
+./tfdocs-extras /path/to/TerraformModules/aws/route53
 ```
 
 The README requires specific markers to identify where to insert the generated documentation. The generated markdown will be inserted between the following markers:
 
-```
+```html
 <!-- TFDOCS_EXTRAS_START -->
 
 <!-- TFDOCS_EXTRAS_END -->
 ```
 
+### JSON Output
+
+Pass the `-json` flag to print a JSON representation of the parsed module manifest to stdout instead of updating the README. This is useful for piping the output into other tools or for debugging.
+
+```bash
+./tfdocs-extras -json /path/to/TerraformModules/aws/route53
+```
+
+## Usage as a GitHub Action
+
+This repository is also published as a GitHub Action. It automatically downloads the appropriate binary for the runner's OS and architecture, scans the specified directories for `README.md` files containing both the `TFDOCS_EXTRAS_START`/`TFDOCS_EXTRAS_END` markers, and processes each one.
+
+Each entry in `directories` is either an explicit path or a glob pattern:
+
+| Pattern             | Behavior                                     |
+| ------------------- | -------------------------------------------- |
+| `./modules/aws/vpc` | Process this single directory.               |
+| `./modules/aws/*`   | Process every direct subdirectory of `aws/`. |
+| `./modules/**`      | Recursively process all subdirectories.      |
+
+Directories that do not contain a `README.md` with both the `TFDOCS_EXTRAS_START`/`TFDOCS_EXTRAS_END` markers are silently skipped.
+
+```yaml
+- uses: FriendsOfTerraform/tfdocs-extras@main
+  with:
+    directories: |
+      ./modules/aws/vpc
+      ./modules/aws/s3
+      ./modules/gcp/*
+      ./modules/azure/**
+```
+
+### Inputs
+
+| Input              | Required | Default                                                              | Description                                                                                                         |
+| ------------------ | -------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `directories`      | Yes      |                                                                      | Newline-separated list of Terraform module directories to process. Supports `*` and `**` glob patterns.             |
+| `version`          | No       | `latest`                                                             | Version of tfdocs-extras to download (e.g. `v0.1.0`).                                                               |
+| `token`            | No       | `${{ github.token }}`                                                | GitHub token used to download the release binary.                                                                   |
+| `commit`           | No       | `false` (boolean)                                                    | Commit any README.md changes after processing. Mutually exclusive with `fail_on_diff`.                              |
+| `commit_message`   | No       | `chore: update tfdocs-extras documentation`                          | Commit message. Only used when `commit` is `true`.                                                                  |
+| `commit_author`    | No       | `github-actions[bot] <github-actions[bot]@users.noreply.github.com>` | Commit author in `Name <email>` format. Only used when `commit` is `true`.                                          |
+| `commit_branch`    | No       | Current branch                                                       | Branch to push the commit to. Only used when `commit` is `true`.                                                    |
+| `fail_on_diff`     | No       | `false` (boolean)                                                    | Exit with a non-zero status if any README.md files were modified. Mutually exclusive with `commit`.                 |
+| `json_output_file` | No       |                                                                      | Path to write the aggregated JSON output. Use this for large outputs that exceed GitHub Actions' output size limit. |
+
+### Outputs
+
+| Output   | Description                                                                                                                                                                                                                  |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `result` | JSON array of module manifests, one object per processed directory. Only set if the total size is below ~1MB (GitHub Actions output limit). For larger outputs, use the `json_output_file` input to write to a file instead. |
+
+### Examples
+
+#### Auto-commit updated documentation
+
+Automatically regenerate and commit documentation whenever Terraform files change on the main branch.
+
+```yaml
+on:
+  push:
+    branches: [main]
+    paths: ["**.tf"]
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: FriendsOfTerraform/tfdocs-extras@main
+        with:
+          directories: |
+            ./modules/aws/vpc
+            ./modules/aws/s3
+          commit: true
+          commit_author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+```
+
+#### Enforce up-to-date documentation in pull requests
+
+Fail the CI check if a pull request contains Terraform changes without updated documentation.
+
+```yaml
+on:
+  pull_request:
+    paths: ["**.tf"]
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: FriendsOfTerraform/tfdocs-extras@main
+        with:
+          directories: |
+            ./modules/aws/vpc
+            ./modules/aws/s3
+            ./modules/azure/*
+            ./modules/vault/*
+          fail_on_diff: true
+```
+
+#### Use the JSON output in a downstream step
+
+```yaml
+- uses: actions/checkout@v6
+- uses: FriendsOfTerraform/tfdocs-extras@main
+  id: tfdocs
+  with:
+    directories: ./modules/aws/vpc
+- run: echo '${{ steps.tfdocs.outputs.result }}'
+```
+
+#### Write JSON output to a file for large module sets
+
+When processing many modules or modules with large manifests, the aggregated JSON may exceed GitHub Actions' output size limit (~1MB). Use `json_output_file` to write the output to a file instead.
+
+```yaml
+- uses: actions/checkout@v6
+- uses: FriendsOfTerraform/tfdocs-extras@main
+  with:
+    directories: |
+      ./modules/**
+    json_output_file: ./tfdocs-manifests.json
+- name: Upload manifest
+  uses: actions/upload-artifact@v4
+  with:
+    name: tfdocs-manifests
+    path: ./tfdocs-manifests.json
+```
+
 ## Documentation Specification
 
 > [!IMPORTANT]
-> 
+>
 > This library is currently in beta, and this specification is subject to change before the first stable release.
 
 The goal of this library is to support Terraform module creators to document their nested variables inline using comments instead of needing to maintain the documentation separately. We introduce two main features:
@@ -201,8 +334,8 @@ variable "access_points" {
       owner_user_id = number
     }))
 
-    /// Path on the EFS file system to expose as the root directory to NFS 
-    /// clients using the access point. A path can have up to four 
+    /// Path on the EFS file system to expose as the root directory to NFS
+    /// clients using the access point. A path can have up to four
     /// subdirectories; `root_directory_creation_permissions` must be
     /// specified if the root path does not exist.
     ///
@@ -253,7 +386,7 @@ Directives are special annotations within doc blocks that provide additional met
 
 When a field can accept only a specific set of values, you can document the allowed values using the `@enum` directive. The different values are delimited by a vertical pipe (i.e. `|`); spaces around the pipe are optional.
 
-```
+```text
 @enum value1|value2|value3
 ```
 
@@ -261,7 +394,7 @@ When a field can accept only a specific set of values, you can document the allo
 
 The `@example` directive allows you to provide usage examples for the documented field. They will be listed alongside the field's documentation under the "Examples" section. It accepts two parameters: a title and a link (URL or anchor).
 
-```
+```text
 @example "Advanced Usage Example" #heading-id
 @example "Basic Usage Example" https://example.com/usage-example
 ```
@@ -274,7 +407,7 @@ There are two types of links you can create using the `@link` directive: named l
 
 A name link allows you to create a link with a custom display name and will be displayed alongside the field's documentation in a special "Links" section.
 
-```
+```text
 @link "Some Resource Documentation" https://example.com/some/resource
 ```
 
@@ -282,7 +415,7 @@ A name link allows you to create a link with a custom display name and will be d
 
 A reference link uses curly braces (i.e. `{}`) to create [link reference definitions](https://spec.commonmark.org/0.31.2/#link-reference-definition). If you create your link reference definition manually in your markdown file, you can omit the `@link` directive altogether. However, if you want to generate the link reference definitions to support [reference links](https://spec.commonmark.org/0.31.2/#full-reference-link), you can use the `@link` directive with curly braces.
 
-```
+```text
 A link to [Some Resource Documentation][resource-id].
 
 @link {resource-id} https://example.com/some/resource
@@ -295,7 +428,7 @@ A link to [Some Resource Documentation][resource-id].
 
 The `@regex` directive allows you to specify a regular expression between `/` delimiters that the field's value must match. After the pattern, you can provide example values that conform to the regex.
 
-```
+```text
 @regex /(Average|Minimum|Maximum) (<=|<|>=|>) (\d+)/ "Average >= 20" "Minimum < 10" "Maximum <= 100"
 ```
 
@@ -303,7 +436,7 @@ The `@regex` directive allows you to specify a regular expression between `/` de
 
 The version when the field was introduced.
 
-```
+```text
 @since 1.0.0
 ```
 
@@ -315,13 +448,13 @@ The `@type` directive allows you to specify an output's data type where the type
 output "nat_gateways" {
   description = <<EOT
     Map of default NAT gateways. The key of the map is the NAT gateway's name
-    
+
     @since 1.0.0
     @type map(object({
       /// The availability zone of the NAT gateway
       /// @since 1.0.0
       availability_zone = string
-      
+
       /// The association ID of the Elastic IP address that's associated with the NAT Gateway
       /// @since 1.0.0
       association_id = string

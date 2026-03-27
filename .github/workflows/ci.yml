@@ -2,20 +2,25 @@ name: Continuous Integration
 
 on:
   push:
-    branches: [ "main" ]
+    tags-ignore:
+      - '*'
   pull_request:
-    branches: [ "main" ]
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.24'
+          go-version: "1.24"
 
       - name: Install dependencies
         run: make deps
@@ -25,3 +30,48 @@ jobs:
 
       - name: Test
         run: make test
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.24"
+
+      - name: Format code
+        run: make fmt
+
+      - name: Check if code is formatted
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "::error::Code is not formatted. Please run 'make fmt' and commit the changes."
+            git --no-pager diff
+            exit 1
+          fi
+
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      issues: write
+      pull-requests: write
+      statuses: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Load super-linter configuration
+        run: grep -v '^#' .github/super-linter.env >> "$GITHUB_ENV"
+
+      - name: Super-linter
+        uses: super-linter/super-linter@v8.5.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

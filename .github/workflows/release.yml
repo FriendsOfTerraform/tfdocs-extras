@@ -3,7 +3,10 @@ name: CLI Tool Releases
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -35,11 +38,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.24'
+          go-version: "1.24"
+          cache: false
 
       - name: Install dependencies
         run: make deps
@@ -67,6 +73,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Download all artifacts
         uses: actions/download-artifact@v6
@@ -78,11 +86,11 @@ jobs:
           VERSION: ${{ github.ref_name }}
         run: |
           mkdir -p release
-          cp artifacts/tfdocs-extras-linux-amd64/tfdocs-extras release/tfdocs-extras-${VERSION}-linux-amd64
-          cp artifacts/tfdocs-extras-linux-arm64/tfdocs-extras release/tfdocs-extras-${VERSION}-linux-arm64
-          cp artifacts/tfdocs-extras-darwin-amd64/tfdocs-extras release/tfdocs-extras-${VERSION}-darwin-amd64
-          cp artifacts/tfdocs-extras-darwin-arm64/tfdocs-extras release/tfdocs-extras-${VERSION}-darwin-arm64
-          cp artifacts/tfdocs-extras-windows-amd64/tfdocs-extras.exe release/tfdocs-extras-${VERSION}-windows-amd64.exe
+          cp "artifacts/tfdocs-extras-linux-amd64/tfdocs-extras" "release/tfdocs-extras-${VERSION}-linux-amd64"
+          cp "artifacts/tfdocs-extras-linux-arm64/tfdocs-extras" "release/tfdocs-extras-${VERSION}-linux-arm64"
+          cp "artifacts/tfdocs-extras-darwin-amd64/tfdocs-extras" "release/tfdocs-extras-${VERSION}-darwin-amd64"
+          cp "artifacts/tfdocs-extras-darwin-arm64/tfdocs-extras" "release/tfdocs-extras-${VERSION}-darwin-arm64"
+          cp "artifacts/tfdocs-extras-windows-amd64/tfdocs-extras.exe" "release/tfdocs-extras-${VERSION}-windows-amd64.exe"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
