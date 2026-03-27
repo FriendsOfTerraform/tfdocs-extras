@@ -20,7 +20,7 @@ inputs:
   token:
     description: "GitHub token used to download the release binary and avoid API rate limits."
     required: false
-    default: ${{ github.token }}
+    default: ""
   commit:
     description: "Commit any README.md changes after processing."
     required: false
@@ -170,21 +170,29 @@ runs:
           # Skip blank/whitespace-only lines
           [ -z "$(echo "$pattern" | tr -d '[:space:]')" ] && continue
 
-          # Expand the pattern into an array so paths with spaces are preserved
-          dirs=( $pattern )
+          # Expand the pattern into an array using compgen/mapfile so paths with spaces are preserved
+          mapfile -t dirs < <(compgen -G -- "$pattern")
+          # If the pattern didn't match anything, skip to the next pattern
+          [ "${#dirs[@]}" -eq 0 ] && continue
 
           for dir in "${dirs[@]}"; do
             [ -d "$dir" ] || continue
 
             readme="${dir}/README.md"
             [ -f "$readme" ] || continue
-            grep -qF "$MARKER_START" "$readme" || continue
-            grep -qF "$MARKER_END" "$readme" || continue
+            grep -qE "^[[:space:]]*$MARKER_START[[:space:]]*$" "$readme" || continue
+            grep -qE "^[[:space:]]*$MARKER_END[[:space:]]*$" "$readme" || continue
 
             echo "Processing: $dir"
-            "$TFDOCS_EXTRAS_BIN" "$dir"
+            if ! "$TFDOCS_EXTRAS_BIN" "$dir"; then
+              echo "Error: tfdocs-extras failed while processing directory: $dir" >&2
+              exit 1
+            fi
 
-            JSON=$("$TFDOCS_EXTRAS_BIN" -json "$dir")
+            if ! JSON=$("$TFDOCS_EXTRAS_BIN" -json "$dir"); then
+              echo "Error: tfdocs-extras -json failed while processing directory: $dir" >&2
+              exit 1
+            fi
             [ -n "$JSON_ITEMS" ] && JSON_ITEMS+=","
             JSON_ITEMS+="$JSON"
 
@@ -192,7 +200,7 @@ runs:
           done
         done <<< "$DIRECTORIES"
 
-        echo "Done: processed $PROCESSED director(ies)"
+        echo "Done: processed $PROCESSED directories"
 
         # Build the final JSON array
         FINAL_JSON="[${JSON_ITEMS}]"

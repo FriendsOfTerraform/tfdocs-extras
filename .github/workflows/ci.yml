@@ -2,6 +2,8 @@ name: Continuous Integration
 
 on:
   push:
+    tags-ignore:
+      - '*'
   pull_request:
 
 permissions:
