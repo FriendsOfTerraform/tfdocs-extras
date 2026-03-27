@@ -95,48 +95,39 @@ runs:
         if [ "$VERSION" = "latest" ]; then
           # Prefer the latest stable release; gh release view only returns a
           # release marked "latest" on GitHub, which is never a pre-release.
-          ERROR_OUTPUT=$(mktemp)
           VERSION=$(gh release view \
             --repo FriendsOfTerraform/tfdocs-extras \
             --json tagName \
-            --jq '.tagName' 2>"$ERROR_OUTPUT")
+            --jq '.tagName' 2>&1)
           EXIT_CODE=$?
 
           if [ $EXIT_CODE -ne 0 ]; then
-            ERROR_MSG=$(cat "$ERROR_OUTPUT")
-            rm -f "$ERROR_OUTPUT"
-
             # Check if this is just "no release found" vs an actual error
-            if echo "$ERROR_MSG" | grep -qE "(release not found|no releases found)"; then
+            if echo "$VERSION" | grep -qE "(release not found|no releases found)"; then
               # No stable release exists; fall back to the most recent pre-release.
               echo "No stable release found, checking for pre-releases..."
-              ERROR_OUTPUT2=$(mktemp)
               VERSION=$(gh release list \
                 --repo FriendsOfTerraform/tfdocs-extras \
                 --json tagName,isPrerelease \
-                --jq '[.[] | select(.isPrerelease)] | first | .tagName' 2>"$ERROR_OUTPUT2")
+                --jq '[.[] | select(.isPrerelease)] | first | .tagName' 2>&1)
               EXIT_CODE2=$?
 
               if [ $EXIT_CODE2 -ne 0 ]; then
-                ERROR_MSG2=$(cat "$ERROR_OUTPUT2")
-                rm -f "$ERROR_OUTPUT2"
-                echo "::error::Failed to list releases: $ERROR_MSG2"
+                echo "::error::Failed to list releases: $VERSION" >&2
                 exit 1
               fi
-              rm -f "$ERROR_OUTPUT2"
 
               if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
-                echo "::error::No stable release or pre-release found"
+                echo "::error::No stable release or pre-release found" >&2
                 exit 1
               fi
               echo "Resolved latest pre-release: $VERSION"
             else
               # This is a real error (auth, rate limit, network, etc.)
-              echo "::error::Failed to fetch latest release: $ERROR_MSG"
+              echo "::error::Failed to fetch latest release: $VERSION" >&2
               exit 1
             fi
           else
-            rm -f "$ERROR_OUTPUT"
             echo "Resolved latest stable release: $VERSION"
           fi
         fi
