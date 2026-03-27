@@ -145,8 +145,10 @@ runs:
           # Skip blank/whitespace-only lines
           [ -z "$(echo "$pattern" | tr -d '[:space:]')" ] && continue
 
-          # Unquoted expansion triggers glob/globstar resolution
-          for dir in $pattern; do
+          # Expand the pattern into an array so paths with spaces are preserved
+          dirs=( $pattern )
+
+          for dir in "${dirs[@]}"; do
             [ -d "$dir" ] || continue
 
             readme="${dir}/README.md"
@@ -197,6 +199,7 @@ runs:
       env:
         COMMIT_MESSAGE: ${{ inputs.commit_message }}
         COMMIT_AUTHOR: ${{ inputs.commit_author }}
+        COMMIT_BRANCH: ${{ inputs.commit_branch }}
       run: |
         if git diff --quiet; then
           echo "No changes to commit"
@@ -210,16 +213,20 @@ runs:
         git add -u
         git commit -m "$COMMIT_MESSAGE"
 
-        BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-        if [ "$BRANCH" = "HEAD" ]; then
-          # Detached HEAD; try to derive a branch name from GitHub context
-          if [ -n "${{ github.head_ref }}" ]; then
-            BRANCH="${{ github.head_ref }}"
-          elif [ -n "${{ github.ref_name }}" ]; then
-            BRANCH="${{ github.ref_name }}"
-          else
-            echo "::error::Cannot determine branch to push to (detached HEAD and no commit_branch, github.head_ref, or github.ref_name)"
-            exit 1
+        if [ -n "$COMMIT_BRANCH" ]; then
+          BRANCH="$COMMIT_BRANCH"
+        else
+          BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+          if [ "$BRANCH" = "HEAD" ]; then
+            # Detached HEAD; try to derive a branch name from GitHub context
+            if [ -n "${{ github.head_ref }}" ]; then
+              BRANCH="${{ github.head_ref }}"
+            elif [ -n "${{ github.ref_name }}" ]; then
+              BRANCH="${{ github.ref_name }}"
+            else
+              echo "::error::Cannot determine branch to push to (detached HEAD and no commit_branch, github.head_ref, or github.ref_name)"
+              exit 1
+            fi
           fi
         fi
 

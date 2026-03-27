@@ -175,7 +175,7 @@ Pass the `-json` flag to print a JSON representation of the parsed module manife
 
 ## Usage as a GitHub Action
 
-This repository is also published as a GitHub Action. It automatically downloads the appropriate binary for the runner's OS and architecture, scans the specified directories for `README.md` files containing the `TFDOCS_EXTRAS_START` marker, and processes each one.
+This repository is also published as a GitHub Action. It automatically downloads the appropriate binary for the runner's OS and architecture, scans the specified directories for `README.md` files containing both the `TFDOCS_EXTRAS_START`/`TFDOCS_EXTRAS_END` markers, and processes each one.
 
 Each entry in `directories` is either an explicit path or a glob pattern:
 
@@ -185,7 +185,7 @@ Each entry in `directories` is either an explicit path or a glob pattern:
 | `./modules/aws/*` | Process every direct subdirectory of `aws/`. |
 | `./modules/**` | Recursively process all subdirectories. |
 
-Directories that do not contain a `README.md` with the `TFDOCS_EXTRAS_START` marker are silently skipped.
+Directories that do not contain a `README.md` with both the `TFDOCS_EXTRAS_START`/`TFDOCS_EXTRAS_END` markers are silently skipped.
 
 ```yaml
 - uses: FriendsOfTerraform/tfdocs-extras@main
