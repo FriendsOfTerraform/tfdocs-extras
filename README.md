@@ -197,6 +197,12 @@ Directories that do not contain a `README.md` with both the `TFDOCS_EXTRAS_START
       ./modules/{azure,vault}/*
 ```
 
+> [!TIP]
+>
+> This GitHub Action is distributed as part of the tool's main repository and therefore does not provide any Git references (e.g., tags like `@v1`) like most other actions. Any tags that exist in this repository (and therefore, this action) will correlate to the software and **not** the action. For ease of use, we recommend using `@main` to always pull the latest action and executable.
+>
+> However, if you'd like to harden your workflow to avoid [ref confusion](https://docs.zizmor.sh/audits/#ref-confusion) pin the workflow to an exact hash. Additionally, to guarantee replicable behavior in addition to pinning your `uses:`, specify the exact version of the CLI tool you'd like to use with the `version` argument of this action.
+
 ### Inputs
 
 | Input              | Required | Default                                                              | Description                                                                                                         |
