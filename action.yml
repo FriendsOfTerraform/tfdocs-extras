@@ -172,12 +172,12 @@ runs:
 
             if [[ "$pattern" != *"*"* && "$pattern" != *"{"* ]]; then
                 echo "::debug::Adding literal path: $pattern"
-                paths+=("$pattern")
+                dirs+=("$pattern")
             else
                 echo "::debug::Processing path pattern: $pattern"
                 while IFS= read -r -d '' match; do
                     echo "::debug::Found path matching pattern: $match"
-                    paths+=("$match")
+                    dirs+=("$match")
                 done < <(eval "ls -1d ${pattern} 2>/dev/null" | tr '\n' '\0')
             fi
         done <<< "$DIRECTORIES"
