@@ -159,48 +159,53 @@ runs:
         JSON_OUTPUT_FILE: ${{ inputs.json_output_file }}
         TFDOCS_EXTRAS_BIN: ${{ steps.tfdocs-extras-bin.outputs.bin }}
       run: |
-        # globstar enables ** for recursive matching; nullglob silently drops
-        # patterns that match nothing rather than treating them as literals
-        shopt -s globstar nullglob
-
         MARKER_START="<!-- TFDOCS_EXTRAS_START -->"
         MARKER_END="<!-- TFDOCS_EXTRAS_END -->"
         PROCESSED=0
         JSON_ITEMS=""
 
-        while IFS= read -r pattern; do
-          # Skip blank/whitespace-only lines
-          [ -z "$(echo "$pattern" | tr -d '[:space:]')" ] && continue
+        # Expand the provided directory patterns and collect matching directories
+        dirs=()
+        while IFS= read -r pattern || [[ -n "$pattern" ]]; do
+            pattern="${pattern#"${pattern%%[![:space:]]*}"}"
+            pattern="${pattern%"${pattern##*[![:space:]]}"}"
 
-          # Expand the pattern into an array using compgen/mapfile so paths with spaces are preserved
-          mapfile -t dirs < <(compgen -G -- "$pattern")
-          # If the pattern didn't match anything, skip to the next pattern
-          [ "${#dirs[@]}" -eq 0 ] && continue
-
-          for dir in "${dirs[@]}"; do
-            [ -d "$dir" ] || continue
-
-            readme="${dir}/README.md"
-            [ -f "$readme" ] || continue
-            grep -qE "^[[:space:]]*$MARKER_START[[:space:]]*$" "$readme" || continue
-            grep -qE "^[[:space:]]*$MARKER_END[[:space:]]*$" "$readme" || continue
-
-            echo "Processing: $dir"
-            if ! "$TFDOCS_EXTRAS_BIN" "$dir"; then
-              echo "Error: tfdocs-extras failed while processing directory: $dir" >&2
-              exit 1
+            if [[ "$pattern" != *"*"* && "$pattern" != *"{"* ]]; then
+                echo "::debug::Adding literal path: $pattern"
+                paths+=("$pattern")
+            else
+                echo "::debug::Processing path pattern: $pattern"
+                while IFS= read -r -d '' match; do
+                    echo "::debug::Found path matching pattern: $match"
+                    paths+=("$match")
+                done < <(eval "ls -1d ${pattern} 2>/dev/null" | tr '\n' '\0')
             fi
-
-            if ! JSON=$("$TFDOCS_EXTRAS_BIN" -json "$dir"); then
-              echo "Error: tfdocs-extras -json failed while processing directory: $dir" >&2
-              exit 1
-            fi
-            [ -n "$JSON_ITEMS" ] && JSON_ITEMS+=","
-            JSON_ITEMS+="$JSON"
-
-            PROCESSED=$((PROCESSED + 1))
-          done
         done <<< "$DIRECTORIES"
+
+        # Process each directory, looking for README.md files with the specified markers
+        for dir in "${dirs[@]}"; do
+          [ -d "$dir" ] || continue
+
+          readme="${dir}/README.md"
+          [ -f "$readme" ] || continue
+          grep -qE "^[[:space:]]*$MARKER_START[[:space:]]*$" "$readme" || continue
+          grep -qE "^[[:space:]]*$MARKER_END[[:space:]]*$" "$readme" || continue
+
+          echo "Processing: $dir"
+          if ! "$TFDOCS_EXTRAS_BIN" "$dir"; then
+            echo "Error: tfdocs-extras failed while processing directory: $dir" >&2
+            exit 1
+          fi
+
+          if ! JSON=$("$TFDOCS_EXTRAS_BIN" -json "$dir"); then
+            echo "Error: tfdocs-extras -json failed while processing directory: $dir" >&2
+            exit 1
+          fi
+          [ -n "$JSON_ITEMS" ] && JSON_ITEMS+=","
+          JSON_ITEMS+="$JSON"
+
+          PROCESSED=$((PROCESSED + 1))
+        done
 
         echo "Done: processed $PROCESSED directories"
 

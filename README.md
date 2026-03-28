@@ -179,11 +179,11 @@ This repository is also published as a GitHub Action. It automatically downloads
 
 Each entry in `directories` is either an explicit path or a glob pattern:
 
-| Pattern             | Behavior                                     |
-| ------------------- | -------------------------------------------- |
-| `./modules/aws/vpc` | Process this single directory.               |
-| `./modules/aws/*`   | Process every direct subdirectory of `aws/`. |
-| `./modules/**`      | Recursively process all subdirectories.      |
+| Pattern                         | Behavior                                                            |
+| ------------------------------- | ------------------------------------------------------------------- |
+| `./modules/aws/vpc`             | Process this single directory.                                      |
+| `./modules/aws/*`               | Process every direct subdirectory of `aws/`.                        |
+| `./modules/{aws,azure,vault}/*` | Process every direct subdirectory of `aws/`, `azure/` and `vault/`. |
 
 Directories that do not contain a `README.md` with both the `TFDOCS_EXTRAS_START`/`TFDOCS_EXTRAS_END` markers are silently skipped.
 
@@ -194,8 +194,14 @@ Directories that do not contain a `README.md` with both the `TFDOCS_EXTRAS_START
       ./modules/aws/vpc
       ./modules/aws/s3
       ./modules/gcp/*
-      ./modules/azure/**
+      ./modules/{azure,vault}/*
 ```
+
+> [!TIP]
+>
+> This GitHub Action is distributed as part of the tool's main repository and therefore does not provide any Git references (e.g., tags like `@v1`) like most other actions. Any tags that exist in this repository (and therefore, this action) will correlate to the software and **not** the action. For ease of use, we recommend using `@main` to always pull the latest action and executable.
+>
+> However, if you'd like to harden your workflow to avoid [ref confusion](https://docs.zizmor.sh/audits/#ref-confusion) pin the workflow to an exact hash. Additionally, to guarantee replicable behavior in addition to pinning your `uses:`, specify the exact version of the CLI tool you'd like to use with the `version` argument of this action.
 
 ### Inputs
 
@@ -289,7 +295,7 @@ When processing many modules or modules with large manifests, the aggregated JSO
 - uses: FriendsOfTerraform/tfdocs-extras@main
   with:
     directories: |
-      ./modules/**
+      ./modules/*
     json_output_file: ./tfdocs-manifests.json
 - name: Upload manifest
   uses: actions/upload-artifact@v4
