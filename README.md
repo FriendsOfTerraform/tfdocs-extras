@@ -179,11 +179,11 @@ This repository is also published as a GitHub Action. It automatically downloads
 
 Each entry in `directories` is either an explicit path or a glob pattern:
 
-| Pattern             | Behavior                                     |
-| ------------------- | -------------------------------------------- |
-| `./modules/aws/vpc` | Process this single directory.               |
-| `./modules/aws/*`   | Process every direct subdirectory of `aws/`. |
-| `./modules/**`      | Recursively process all subdirectories.      |
+| Pattern                         | Behavior                                                            |
+| ------------------------------- | ------------------------------------------------------------------- |
+| `./modules/aws/vpc`             | Process this single directory.                                      |
+| `./modules/aws/*`               | Process every direct subdirectory of `aws/`.                        |
+| `./modules/{aws,azure,vault}/*` | Process every direct subdirectory of `aws/`, `azure/` and `vault/`. |
 
 Directories that do not contain a `README.md` with both the `TFDOCS_EXTRAS_START`/`TFDOCS_EXTRAS_END` markers are silently skipped.
 
@@ -194,7 +194,7 @@ Directories that do not contain a `README.md` with both the `TFDOCS_EXTRAS_START
       ./modules/aws/vpc
       ./modules/aws/s3
       ./modules/gcp/*
-      ./modules/azure/**
+      ./modules/{azure,vault}/*
 ```
 
 ### Inputs
@@ -289,7 +289,7 @@ When processing many modules or modules with large manifests, the aggregated JSO
 - uses: FriendsOfTerraform/tfdocs-extras@main
   with:
     directories: |
-      ./modules/**
+      ./modules/*
     json_output_file: ./tfdocs-manifests.json
 - name: Upload manifest
   uses: actions/upload-artifact@v4
