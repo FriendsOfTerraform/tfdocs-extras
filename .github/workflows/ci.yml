@@ -21,6 +21,7 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version: "1.24"
+          cache: false
 
       - name: Install dependencies
         run: make deps
@@ -42,6 +43,7 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version: "1.24"
+          cache: false
 
       - name: Format code
         run: make fmt
