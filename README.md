@@ -10,6 +10,12 @@ A Go library for parsing an `object()` Terraform type definition string into a d
 
 This repository houses a Go library that can parse a Terraform `object()` type definition string (including nested objects) into a structured representation that includes field names, types, optional status, default values, and parsed documentation (including support for doc directives like `@since`, `@example`, etc.). Additionally, it houses a simple CLI tool that uses this project's API for reading a Terraform variable file and outputting the parsed documentation in a GitHub-friendly Markdown format.
 
+- Usage
+    - [as a Go library](#usage-as-a-go-library)
+    - [as a CLI tool](usage-as-a-cli-tool)
+    - [as a GitHub Action](#usage-as-a-github-action)
+- [Documentation Syntax](#documentation-specification)
+
 > [!TIP]
 > See our [demo pull request using this tool][fot-modules-pr]
 
