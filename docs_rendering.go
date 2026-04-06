@@ -65,7 +65,7 @@ func (r *Argument) HasDefaultValue() bool {
 		return false
 	}
 
-	return r.DefaultValue != nil
+	return r.DefaultValue != nil && *r.DefaultValue != ""
 }
 
 type ArgGroupType int

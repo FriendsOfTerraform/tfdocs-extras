@@ -1,6 +1,7 @@
 package tfdocextras
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -224,6 +225,14 @@ func flattenSimpleTypes(data astDataType) *string {
 		}
 
 		result := fxnName + "(" + strings.Join(args, ", ") + ")"
+		return &result
+	}
+	if data.Array != nil {
+		values := make([]string, len(data.Array))
+		for i, item := range data.Array {
+			values[i] = *flattenSimpleTypes(*item)
+		}
+		result := fmt.Sprintf("[%s]", strings.Join(values, ", "))
 		return &result
 	}
 
