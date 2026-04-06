@@ -9,8 +9,8 @@ import (
 )
 
 type MetadataAttribute struct {
-	Name    string `json:"name,omitempty"`
-	Content string `json:"content,omitempty"`
+	Name    string `json:"name"`
+	Content string `json:"content"`
 }
 
 type ArgumentMetadata struct {
@@ -23,13 +23,14 @@ type ArgumentMetadata struct {
 }
 
 type Argument struct {
-	Type         string  `json:"type,omitempty"`
-	ComplexType  *string `json:"complex_type,omitempty"`
-	Name         string  `json:"name,omitempty"`
-	DefaultValue *string `json:"default_value,omitempty"`
-	Required     bool    `json:"required,omitempty"`
-	Sensitive    bool    `json:"sensitive,omitempty"`
-	Description  string  `json:"description,omitempty"`
+	ParentType   ArgGroupType `json:"-"`
+	Type         string       `json:"type"`
+	ComplexType  *string      `json:"complex_type,omitempty"`
+	Name         string       `json:"name"`
+	DefaultValue *string      `json:"default_value"`
+	Required     bool         `json:"required"`
+	Sensitive    bool         `json:"sensitive"`
+	Description  string       `json:"description"`
 	ArgumentMetadata
 }
 
@@ -78,8 +79,9 @@ const (
 
 type ArgumentGroup struct {
 	Type        ArgGroupType `json:"-"`
+	Required    bool         `json:"required"`
 	Description string       `json:"description"`
-	Rows        []Argument   `json:"rows,omitempty"`
+	Rows        []Argument   `json:"rows"`
 	ArgumentMetadata
 }
 
@@ -88,17 +90,18 @@ func (d *ArgumentGroup) GetMetadata() *ArgumentMetadata {
 }
 
 type ModuleManifest struct {
-	RequiredInputs ArgumentGroup            `json:"required_inputs,omitempty"`
-	OptionalInputs ArgumentGroup            `json:"optional_inputs,omitempty"`
-	Outputs        ArgumentGroup            `json:"outputs,omitempty"`
-	Objects        map[string]ArgumentGroup `json:"objects,omitempty"`
-	ReferenceLinks map[string]string        `json:"reference_links,omitempty"`
+	RequiredInputs ArgumentGroup            `json:"required_inputs"`
+	OptionalInputs ArgumentGroup            `json:"optional_inputs"`
+	Outputs        ArgumentGroup            `json:"outputs"`
+	Objects        map[string]ArgumentGroup `json:"objects"`
+	ReferenceLinks map[string]string        `json:"reference_links"`
 }
 
 func newArgumentGroup(grpType ArgGroupType) ArgumentGroup {
 	return ArgumentGroup{
 		Type:        grpType,
 		Description: "",
+		Required:    false,
 		ArgumentMetadata: ArgumentMetadata{
 			Attributes:    []MetadataAttribute{},
 			Enumerations:  []string{},
@@ -111,8 +114,9 @@ func newArgumentGroup(grpType ArgGroupType) ArgumentGroup {
 	}
 }
 
-func newArgument(typeStr, name, description string) Argument {
+func newArgument(parentType ArgGroupType, typeStr, name, description string) Argument {
 	return Argument{
+		ParentType:   parentType,
 		Type:         typeStr,
 		Name:         name,
 		DefaultValue: nil,
@@ -205,12 +209,13 @@ func recordNested(group StructProperty, manifest *ModuleManifest) {
 
 	if group.Properties != nil && len(group.Properties) > 0 {
 		data := newArgumentGroup(Anonymous)
+		data.Required = !group.Optional
 		data.Description = strings.Join(group.Documentation.Content, "\n")
 
 		processDirectives(group.Documentation.Directives, manifest, &data, nil)
 
 		for _, field := range group.Properties {
-			row := newArgument(field.DataTypeStr, field.Name, strings.Join(field.Documentation.Content, "\n"))
+			row := newArgument(data.Type, field.DataTypeStr, field.Name, strings.Join(field.Documentation.Content, "\n"))
 
 			if field.DefaultValue != nil {
 				row.DefaultValue = field.DefaultValue
@@ -219,6 +224,8 @@ func recordNested(group StructProperty, manifest *ModuleManifest) {
 			if field.NestedDataType != nil {
 				row.ComplexType = field.NestedDataType
 			}
+
+			row.Required = !field.Optional
 
 			processDirectives(field.Documentation.Directives, manifest, nil, &row)
 
@@ -241,8 +248,8 @@ func processStructAndNested(extras *DocumentedStruct, manifest *ModuleManifest) 
 	recordNested(extras.StructProperty, manifest)
 }
 
-func createArgumentFromDocBlock(name string, typeStr string, docBlk PropertyDocBlock, extras *DocumentedStruct, manifest *ModuleManifest) Argument {
-	tableRow := newArgument(typeStr, name, strings.Join(docBlk.Content, "\n"))
+func createArgumentFromDocBlock(argType ArgGroupType, name string, typeStr string, docBlk PropertyDocBlock, extras *DocumentedStruct, manifest *ModuleManifest) Argument {
+	tableRow := newArgument(argType, typeStr, name, strings.Join(docBlk.Content, "\n"))
 
 	processDirectives(docBlk.Directives, manifest, nil, &tableRow)
 
@@ -277,7 +284,13 @@ func ParseModuleArgsIntoManifest(inputs []*terraform.Input, outputs []*terraform
 
 		docBlk := parseStringIntoDocBlock(string(input.Description))
 		defaultValue := input.GetValue()
-		tableRow := createArgumentFromDocBlock(input.Name, string(input.Type), docBlk, extras, templateData)
+
+		argType := OptionalInput
+		if input.Required {
+			argType = RequiredInput
+		}
+
+		tableRow := createArgumentFromDocBlock(argType, input.Name, string(input.Type), docBlk, extras, templateData)
 		tableRow.DefaultValue = &defaultValue
 		tableRow.Required = input.Required
 
@@ -294,7 +307,7 @@ func ParseModuleArgsIntoManifest(inputs []*terraform.Input, outputs []*terraform
 		outputType := "unknown"
 
 		if output.Description == "" {
-			tableRow := newArgument(outputType, output.Name, "")
+			tableRow := newArgument(Output, outputType, output.Name, "")
 			tableRow.Sensitive = output.Sensitive
 			templateData.Outputs.Rows = append(templateData.Outputs.Rows, tableRow)
 
@@ -310,7 +323,7 @@ func ParseModuleArgsIntoManifest(inputs []*terraform.Input, outputs []*terraform
 			extras, _ = ParseIntoDocumentedStruct(outputType, output.Name)
 		}
 
-		tableRow := createArgumentFromDocBlock(output.Name, outputType, docBlk, extras, templateData)
+		tableRow := createArgumentFromDocBlock(Output, output.Name, outputType, docBlk, extras, templateData)
 		tableRow.Sensitive = output.Sensitive
 		templateData.Outputs.Rows = append(templateData.Outputs.Rows, tableRow)
 

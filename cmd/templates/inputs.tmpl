@@ -54,7 +54,7 @@
 {{define "table" -}}
     {{ template "doc_summary" . -}}
 
-    <table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>{{if eq .Type 3}}Sensitive{{else}}Default&nbsp;Value{{end}}</th></tr></thead><tbody>
+    <table><thead><tr><th>Type</th><th align="left" width="100%">Name</th>{{if eq .Type 0}}<th>Required</th>{{end}}<th>{{if eq .Type 3}}Sensitive{{else}}Default&nbsp;Value{{end}}</th></tr></thead><tbody>
         {{range .Rows -}}
             {{template "table_row" . -}}
         {{ end -}}
@@ -75,9 +75,10 @@
         {{- end -}}
     </td>
     <td width="100%">{{.Name}}</td>
-    <td>{{if .HasDefaultValue}}<code>{{.DefaultValue}}</code>{{else if .Sensitive}}Yes{{end}}</td>
+    {{- if eq .ParentType 0 }}<td>{{if .Required}}Yes{{end}}</td>{{end -}}
+    <td>{{if .Required}}<em>n/a</em>{{else if .HasDefaultValue}}<code>{{.DefaultValue}}</code>{{else if .Sensitive}}Yes{{end}}</td>
 </tr>
-<tr><td colspan="3">
+<tr><td colspan="{{ if eq .ParentType 0 }}4{{else}}3{{end}}">
 
 {{template "doc_summary" .}}
 
