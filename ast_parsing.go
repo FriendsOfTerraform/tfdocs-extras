@@ -106,5 +106,43 @@ func parseAst(str string) (*astRoot, error) {
 		return nil, err
 	}
 
+	if ast != nil {
+		fixEmptyArrays(ast.Expr)
+	}
+
 	return ast, nil
+}
+
+func fixEmptyArrays(dt *astDataType) {
+	// Participle's optional group ( ... )? leaves Array as nil when it matches
+	// zero items. We detect this by checking if all type fields are nil,
+	// indicating the array alternative was matched but contained no elements.
+
+	if dt == nil {
+		return
+	}
+
+	if dt.Func != nil {
+		for _, arg := range dt.Func.Args {
+			fixEmptyArrays(arg)
+
+			// If all fields are nil, this was an empty array []
+			if arg.Array == nil && arg.Func == nil && arg.Object == nil &&
+				arg.Primitive == nil && arg.Number == nil && arg.String == nil {
+				arg.Array = make([]*astDataType, 0)
+			}
+		}
+	}
+
+	if dt.Object != nil {
+		for _, prop := range dt.Object.Pairs {
+			fixEmptyArrays(prop.Value)
+		}
+	}
+
+	if dt.Array != nil {
+		for _, elem := range dt.Array {
+			fixEmptyArrays(elem)
+		}
+	}
 }

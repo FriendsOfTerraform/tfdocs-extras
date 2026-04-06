@@ -29,6 +29,35 @@ func TestParse_SimpleFunction(t *testing.T) {
 	}
 }
 
+func TestParse_OptionalListWithEmptyListAsDefault(t *testing.T) {
+	input := `optional(list(string), [])`
+
+	result, err := parseAst(input)
+	if err != nil {
+		t.Fatalf("parseAst failed: %v", err)
+	}
+
+	if result.Expr.Func == nil {
+		t.Fatal("Expected astFunction, got nil")
+	}
+
+	if result.Expr.Func.Name != "optional" {
+		t.Errorf("Expected astFunction name 'optional', got '%s'", result.Expr.Func.Name)
+	}
+
+	if len(result.Expr.Func.Args) != 2 {
+		t.Errorf("Expected 2 arguments, got %d", len(result.Expr.Func.Args))
+	}
+
+	if result.Expr.Func.Args[0].Func == nil || result.Expr.Func.Args[0].Func.Name != "list" {
+		t.Error("Expected list(string) as first argument")
+	}
+
+	if result.Expr.Func.Args[1].Array == nil || len(result.Expr.Func.Args[1].Array) != 0 {
+		t.Error("Expected empty list as second argument")
+	}
+}
+
 func TestParse_SimpleFunctionWithArrayValue(t *testing.T) {
 	input := `optional(list(string), ["GET", 'HEAD'])`
 
