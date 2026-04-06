@@ -28,6 +28,7 @@ func TestParseModuleArgsIntoManifest_OutputsWithoutDescription(t *testing.T) {
 	}
 
 	expectedFirstOutput := Argument{
+		ParentType:  Output,
 		Type:        "unknown",
 		Name:        "vpc_id",
 		Description: "",
@@ -47,6 +48,7 @@ func TestParseModuleArgsIntoManifest_OutputsWithoutDescription(t *testing.T) {
 	}
 
 	expectedSecondOutput := Argument{
+		ParentType:  Output,
 		Type:        "unknown",
 		Name:        "api_key",
 		Description: "",
@@ -89,6 +91,7 @@ func TestParseModuleArgsIntoManifest_OutputsWithTypeDirective(t *testing.T) {
 	}
 
 	expected := Argument{
+		ParentType:  Output,
 		Type:        "string",
 		Name:        "vpc_arn",
 		Description: "The ARN of the VPC",
@@ -138,6 +141,7 @@ func TestParseModuleArgsIntoManifest_OutputsWithComplexType(t *testing.T) {
 
 	complexTypeStr := "nat_gateways"
 	expectedOutput := Argument{
+		ParentType:  Output,
 		Type:        "map(object(nat_gateways))",
 		ComplexType: &complexTypeStr,
 		Name:        "nat_gateways",
@@ -207,6 +211,7 @@ func TestParseModuleArgsIntoManifest_OutputsSensitiveField(t *testing.T) {
 
 	expectedOutputs := []Argument{
 		{
+			ParentType:  Output,
 			Type:        "unknown",
 			Name:        "regular_output",
 			Description: "A regular output",
@@ -221,6 +226,7 @@ func TestParseModuleArgsIntoManifest_OutputsSensitiveField(t *testing.T) {
 			},
 		},
 		{
+			ParentType:  Output,
 			Type:        "unknown",
 			Name:        "sensitive_output",
 			Description: "A sensitive output",
@@ -441,7 +447,7 @@ func TestCreateArgumentFromDocBlock(t *testing.T) {
 		},
 	}
 
-	arg := createArgumentFromDocBlock("test_arg", "string", docBlk, nil, manifest)
+	arg := createArgumentFromDocBlock(RequiredInput, "test_arg", "string", docBlk, nil, manifest)
 
 	if len(arg.ArgumentMetadata.Attributes) == 0 {
 		t.Error("Expected @since directive to be processed into attributes")
