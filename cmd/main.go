@@ -13,6 +13,7 @@ import (
 	"text/template"
 
 	"github.com/FriendsOfTerraform/tfdocs-extras"
+	"github.com/terraform-docs/terraform-config-inspect/tfconfig"
 	"github.com/terraform-docs/terraform-docs/print"
 	"github.com/terraform-docs/terraform-docs/terraform"
 )
@@ -78,6 +79,16 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// tfdocs has a bug where it doesn't set the sensitivity flag on outputs,
+	// even if it's set in the raw module config. This is a workaround to read
+	// the output sensitivity flags by reloading the module with
+	// terraform-config-inspect.
+	//
+	// see: https://github.com/terraform-docs/terraform-docs/issues/798
+	if err := outputSensitivityFallback(modulePath, module.Outputs); err != nil {
+		log.Printf("Warning: could not enrich output sensitivity flags: %v", err)
+	}
+
 	templateData := tfdocextras.ParseModuleArgsIntoManifest(module.Inputs, module.Outputs)
 
 	// If -json flag is set, output JSON and exit
@@ -128,4 +139,19 @@ func main() {
 	}
 
 	fmt.Println("README.md updated successfully")
+}
+
+func outputSensitivityFallback(modulePath string, outputs []*terraform.Output) error {
+	tfModule, diagnostics := tfconfig.LoadModule(modulePath)
+	if diagnostics != nil && diagnostics.HasErrors() {
+		return diagnostics
+	}
+
+	for _, output := range outputs {
+		if rawOutput, ok := tfModule.Outputs[output.Name]; ok {
+			output.Sensitive = rawOutput.Sensitive
+		}
+	}
+
+	return nil
 }

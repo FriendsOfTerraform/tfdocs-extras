@@ -363,6 +363,28 @@ func TestParseModuleArgsIntoManifest_OutputsWithSensitiveFlag(t *testing.T) {
 	}
 }
 
+func TestParseModuleArgsIntoManifest_OutputSensitiveSummary(t *testing.T) {
+	outputs := []*terraform.Output{
+		{
+			Name:        "sensitive_summary",
+			Description: "Sensitive summary value for output handling tests.\n\n@type string",
+			Sensitive:   true,
+		},
+	}
+
+	manifest := ParseModuleArgsIntoManifest([]*terraform.Input{}, outputs)
+
+	if diff := deep.Equal(len(manifest.Outputs.Rows), 1); diff != nil {
+		t.Fatalf("Output rows count mismatch:\n%v", diff)
+	}
+
+	output := manifest.Outputs.Rows[0]
+
+	if !output.Sensitive {
+		t.Fatalf("Expected output 'sensitive_summary' to be marked sensitive")
+	}
+}
+
 func TestParseModuleArgsIntoManifest_OutputWithoutTypeDirective(t *testing.T) {
 	outputs := []*terraform.Output{
 		{

@@ -347,7 +347,7 @@ Echoes the required string input.
 </td></tr>
 <tr>
     <td><code>string</code></td>
-    <td width="100%">sensitive_summary</td><td></td>
+    <td width="100%">sensitive_summary</td><td>Yes</td>
 </tr>
 <tr><td colspan="3">
 
