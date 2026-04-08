@@ -101,10 +101,7 @@ Required primitive string.
 <table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>Default&nbsp;Value</th></tr></thead><tbody>
         <tr>
     <td><code>object(<a href="#code_fence_examples">code_fence_examples</a>)</code></td>
-    <td width="100%">code_fence_examples</td><td><code>{
-  "enabled": false,
-  "labels": []
-}</code></td>
+    <td width="100%">code_fence_examples</td><td><em><a href="#code_fence_examples">see below</a></em></td>
 </tr>
 <tr><td colspan="3">
 
@@ -140,10 +137,7 @@ code_fence_examples = {
 </td></tr>
 <tr>
     <td><code>object(<a href="#deeply_nested_object">deeply_nested_object</a>)</code></td>
-    <td width="100%">deeply_nested_object</td><td><code>{
-  "enabled": true,
-  "name": "example"
-}</code></td>
+    <td width="100%">deeply_nested_object</td><td><em><a href="#deeply_nested_object">see below</a></em></td>
 </tr>
 <tr><td colspan="3">
 
@@ -279,9 +273,7 @@ Demonstrates named and reference links.
 </td></tr>
 <tr>
     <td><code>object(<a href="#object_with_block_comment_docs">object_with_block_comment_docs</a>)</code></td>
-    <td width="100%">object_with_block_comment_docs</td><td><code>{
-  "id": "example-id"
-}</code></td>
+    <td width="100%">object_with_block_comment_docs</td><td><em><a href="#object_with_block_comment_docs">see below</a></em></td>
 </tr>
 <tr><td colspan="3">
 

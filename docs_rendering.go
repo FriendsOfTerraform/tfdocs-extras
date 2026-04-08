@@ -68,6 +68,20 @@ func (r *Argument) HasDefaultValue() bool {
 	return r.DefaultValue != nil && *r.DefaultValue != ""
 }
 
+func (r *Argument) HasNonEmptyObjectDefault() bool {
+	if r.ComplexType == nil || !r.HasDefaultValue() {
+		return false
+	}
+
+	if !strings.HasPrefix(strings.TrimSpace(r.Type), "object(") {
+		return false
+	}
+
+	defaultValue := strings.TrimSpace(*r.DefaultValue)
+
+	return defaultValue != "{}" && defaultValue != "null"
+}
+
 type ArgGroupType int
 
 const (

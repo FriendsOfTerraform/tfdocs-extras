@@ -76,7 +76,7 @@
     </td>
     <td width="100%">{{.Name}}</td>
     {{- if eq .ParentType 0 }}<td>{{if .Required}}Yes{{end}}</td>{{end -}}
-    <td>{{if .Required}}<em>n/a</em>{{else if .HasDefaultValue}}<code>{{.DefaultValue}}</code>{{else if .Sensitive}}Yes{{end}}</td>
+    <td>{{if .Required}}<em>n/a</em>{{else if .HasNonEmptyObjectDefault}}<em><a href="#{{.GetAnchor}}">see below</a></em>{{else if .HasDefaultValue}}<code>{{.DefaultValue}}</code>{{else if .Sensitive}}Yes{{end}}</td>
 </tr>
 <tr><td colspan="{{ if eq .ParentType 0 }}4{{else}}3{{end}}">
 
