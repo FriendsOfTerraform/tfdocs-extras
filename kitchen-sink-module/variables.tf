@@ -49,6 +49,38 @@ variable "regex_validated_id" {
   }
 }
 
+variable "code_fence_examples" {
+  description = <<-EOT
+    Demonstrates fenced code blocks in descriptions.
+
+    ```terraform
+    code_fence_examples = {
+      enabled = true
+      labels  = ["alpha", "beta"]
+    }
+    ```
+
+    ~~~terraform
+    code_fence_examples = {
+      enabled = false
+      labels  = []
+    }
+    ~~~
+
+    @since 1.1.0
+  EOT
+
+  type = object({
+    enabled = bool
+    labels  = list(string)
+  })
+
+  default = {
+    enabled = false
+    labels  = []
+  }
+}
+
 variable "named_links" {
   description = <<-EOT
     Demonstrates named and reference links.

@@ -313,6 +313,8 @@ func isBracketsBalanced(lines []string) bool {
 func parseDocBlock(block astDocBlock) PropertyDocBlock {
 	indentation := ""
 	indentationSet := false
+	inCodeFence := false
+	codeFenceDelimiter := ""
 	doc := PropertyDocBlock{}
 
 	var currentDirective *DocDirective
@@ -359,7 +361,25 @@ func parseDocBlock(block astDocBlock) PropertyDocBlock {
 				})
 			}
 		} else {
-			doc.Content = append(doc.Content, strings.TrimSpace(line))
+			trimmedLine := strings.TrimSpace(line)
+
+			if !inCodeFence && (strings.HasPrefix(trimmedLine, "```") || strings.HasPrefix(trimmedLine, "~~~")) {
+				doc.Content = append(doc.Content, trimmedLine)
+				inCodeFence = !inCodeFence
+				if strings.HasPrefix(trimmedLine, "```") {
+					codeFenceDelimiter = "```"
+				} else {
+					codeFenceDelimiter = "~~~"
+				}
+			} else if inCodeFence && strings.HasPrefix(trimmedLine, codeFenceDelimiter) {
+				doc.Content = append(doc.Content, trimmedLine)
+				inCodeFence = false
+				codeFenceDelimiter = ""
+			} else if inCodeFence {
+				doc.Content = append(doc.Content, line)
+			} else {
+				doc.Content = append(doc.Content, trimmedLine)
+			}
 		}
 	})
 

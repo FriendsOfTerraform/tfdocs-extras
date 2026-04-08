@@ -1531,3 +1531,93 @@ func TestParseDocBlock_MultiLineDirectiveWithStringLiterals(t *testing.T) {
 		t.Error("Expected type directive to contain 'value = number'")
 	}
 }
+
+func TestParseDocBlock_PreservesCodeFenceIndentation(t *testing.T) {
+	lines := []astDocString{
+		astDocString("Enables and configures NAT gateways"),
+		astDocString(""),
+		astDocString("```terraform"),
+		astDocString("nat_gateway = {"),
+		astDocString("  enabled = true"),
+		astDocString("  public_ip_prefix_length = \"28\" # 16 IP addresses"),
+		astDocString("}"),
+		astDocString("```"),
+		astDocString(""),
+		astDocString("@since 0.0.1"),
+	}
+
+	block := astDocBlock{
+		Lines: lines,
+		Block: nil,
+	}
+
+	result := parseDocBlock(block)
+
+	expectedContent := []string{
+		"Enables and configures NAT gateways",
+		"",
+		"```terraform",
+		"nat_gateway = {",
+		"  enabled = true",
+		"  public_ip_prefix_length = \"28\" # 16 IP addresses",
+		"}",
+		"```",
+	}
+
+	if diff := deep.Equal(result.Content, expectedContent); diff != nil {
+		t.Errorf("RawContent mismatch:\n%v", diff)
+	}
+
+	expectedDirectives := []DocDirective{
+		{Name: "since", RawContent: "0.0.1", Parsed: ParsedDirective{Type: DirSince, Args: []string{"0.0.1"}, Flags: IsValid}},
+	}
+
+	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {
+		t.Errorf("Directives mismatch:\n%v", diff)
+	}
+}
+
+func TestParseDocBlock_PreservesTildeCodeFenceIndentation(t *testing.T) {
+	lines := []astDocString{
+		astDocString("Enables and configures NAT gateways"),
+		astDocString(""),
+		astDocString("~~~terraform"),
+		astDocString("nat_gateway = {"),
+		astDocString("  enabled = true"),
+		astDocString("  public_ip_prefix_length = \"28\" # 16 IP addresses"),
+		astDocString("}"),
+		astDocString("~~~"),
+		astDocString(""),
+		astDocString("@since 0.0.1"),
+	}
+
+	block := astDocBlock{
+		Lines: lines,
+		Block: nil,
+	}
+
+	result := parseDocBlock(block)
+
+	expectedContent := []string{
+		"Enables and configures NAT gateways",
+		"",
+		"~~~terraform",
+		"nat_gateway = {",
+		"  enabled = true",
+		"  public_ip_prefix_length = \"28\" # 16 IP addresses",
+		"}",
+		"~~~",
+	}
+
+	if diff := deep.Equal(result.Content, expectedContent); diff != nil {
+		t.Errorf("RawContent mismatch:\n%v", diff)
+	}
+
+	expectedDirectives := []DocDirective{
+		{Name: "since", RawContent: "0.0.1", Parsed: ParsedDirective{Type: DirSince, Args: []string{"0.0.1"}, Flags: IsValid}},
+	}
+
+	if diff := deep.Equal(result.Directives, expectedDirectives); diff != nil {
+		t.Errorf("Directives mismatch:\n%v", diff)
+	}
+}

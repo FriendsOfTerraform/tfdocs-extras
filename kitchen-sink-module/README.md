@@ -100,6 +100,45 @@ Required primitive string.
     
 <table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>Default&nbsp;Value</th></tr></thead><tbody>
         <tr>
+    <td><code>object(<a href="#code_fence_examples">code_fence_examples</a>)</code></td>
+    <td width="100%">code_fence_examples</td><td><code>{
+  "enabled": false,
+  "labels": []
+}</code></td>
+</tr>
+<tr><td colspan="3">
+
+Demonstrates fenced code blocks in descriptions.
+
+```terraform
+code_fence_examples = {
+  enabled = true
+  labels  = ["alpha", "beta"]
+}
+```
+
+~~~terraform
+code_fence_examples = {
+  enabled = false
+  labels  = []
+}
+~~~
+
+    
+
+    
+
+    
+
+    
+
+    
+**Since:** 1.1.0
+        
+
+
+</td></tr>
+<tr>
     <td><code>object(<a href="#deeply_nested_object">deeply_nested_object</a>)</code></td>
     <td width="100%">deeply_nested_object</td><td><code>{
   "enabled": true,
@@ -450,6 +489,64 @@ Nested map(object(...)) for autoscaling profiles.
 <tr>
     <td><code>number</code></td>
     <td width="100%">target_cpu</td><td></td><td><code>70</code></td>
+</tr>
+<tr><td colspan="4">
+
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+
+</td></tr>
+</tbody></table>
+
+
+
+#### code_fence_examples
+
+
+
+    
+
+    
+
+    
+
+    
+
+    
+<table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>Required</th><th>Default&nbsp;Value</th></tr></thead><tbody>
+        <tr>
+    <td><code>bool</code></td>
+    <td width="100%">enabled</td><td>Yes</td><td><em>n/a</em></td>
+</tr>
+<tr><td colspan="4">
+
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+
+</td></tr>
+<tr>
+    <td><code>list(string)</code></td>
+    <td width="100%">labels</td><td>Yes</td><td><em>n/a</em></td>
 </tr>
 <tr><td colspan="4">
 
