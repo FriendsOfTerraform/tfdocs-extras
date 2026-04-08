@@ -394,6 +394,15 @@ Directives are special annotations within doc blocks that provide additional met
 > [!TIP]
 > Using HEREDOC syntax for a variable's `description` attribute allows you to use `@`-directives for a top-level variable.
 
+#### `@deprecated`
+
+Use this directive to mark a field as deprecated and optionally provide migration guidance.
+
+```text
+@deprecated Use `new_field_name` instead.
+```
+
+
 #### `@enum`
 
 When a field can accept only a specific set of values, you can document the allowed values using the `@enum` directive. The different values are delimited by a vertical pipe (i.e. `|`); spaces around the pipe are optional.
