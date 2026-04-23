@@ -8,6 +8,10 @@ on:
       - '*'
   pull_request:
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -79,6 +83,20 @@ jobs:
         uses: super-linter/super-linter@v8.5.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Minimize outdated super-linter comments
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          REPO=${{ github.repository }}
+
+          COMMENT_IDS=$(gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" --paginate --jq '[.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("# Super-linter summary")))] | sort_by(.created_at) | map(.node_id) | .[:-1] | .[]')
+
+          for NODE_ID in $COMMENT_IDS; do
+            gh api graphql -f query='mutation MinimizeComment($id: ID!) { minimizeComment(input: {subjectId: $id, classifier: OUTDATED}) { minimizedComment { isMinimized } } }' -f id="$NODE_ID"
+          done
 
   kitchen-sink-readme:
     runs-on: ubuntu-latest

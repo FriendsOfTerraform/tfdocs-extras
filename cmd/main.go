@@ -89,7 +89,7 @@ func main() {
 		log.Printf("Warning: could not enrich output sensitivity flags: %v", err)
 	}
 
-	templateData := tfdocextras.ParseModuleArgsIntoManifest(module.Inputs, module.Outputs)
+	templateData := tfdocsextras.ParseModuleArgsIntoManifest(module.Inputs, module.Outputs)
 
 	// If -json flag is set, output JSON and exit
 	if *jsonOutput {

@@ -1,4 +1,4 @@
-package tfdocextras
+package tfdocsextras
 
 import (
 	"regexp"
