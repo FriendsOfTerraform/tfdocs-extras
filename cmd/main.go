@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"embed"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -10,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"text/template"
+	gotemplate "text/template"
 
 	"github.com/FriendsOfTerraform/tfdocs-extras"
 	"github.com/terraform-docs/terraform-config-inspect/tfconfig"
@@ -18,11 +17,18 @@ import (
 	"github.com/terraform-docs/terraform-docs/terraform"
 )
 
-//go:embed templates/inputs.tmpl
-var inputsTmplContent embed.FS
-
 const ExtrasMarkerStart = "<!-- TFDOCS_EXTRAS_START -->"
 const ExtrasMarkerEnd = "<!-- TFDOCS_EXTRAS_END -->"
+
+// renderSection executes a single named template and trims the blank lines
+// around it. Whitespace inside the section is left alone.
+func renderSection(tpl *gotemplate.Template, name string, manifest *tfdocsextras.ModuleManifest) string {
+	var buffer bytes.Buffer
+	if err := tpl.ExecuteTemplate(&buffer, name, manifest); err != nil {
+		log.Fatalf("rendering %s section: %v", name, err)
+	}
+	return strings.TrimSpace(buffer.String())
+}
 
 // ReplaceContentBetweenMarkers replaces content between startMarker and endMarker
 // Both markers must exist on their own lines
@@ -108,28 +114,43 @@ func main() {
 		log.Fatalf("Failed to read README.md: %v", err)
 	}
 
-	// Generate the template output
-	tmpl, err := template.New("inputs.tmpl").Funcs(template.FuncMap{
+	// Generate the template output by rendering sections individually.
+	tmpl, err := gotemplate.New("structured.tmpl").Funcs(gotemplate.FuncMap{
 		"indent": func(spaces int, str string) string {
 			return "\n" + strings.Repeat("  ", spaces)
 		},
-	}).ParseFS(inputsTmplContent, "templates/inputs.tmpl")
+		"heading": func(extra int) string {
+			// Use default indent of 2 (## at base level, ### for subsections, etc.)
+			return strings.Repeat("#", 2+extra)
+		},
+	}).ParseFS(tfdocsextras.TemplateFS, "templates/structured.tmpl")
 	if err != nil {
 		panic(err)
 	}
 
-	var templateOutput bytes.Buffer
-	err = tmpl.Execute(&templateOutput, templateData)
-	if err != nil {
-		panic(err)
+	sections := []string{
+		renderSection(tmpl, "inputs", templateData),
+		renderSection(tmpl, "outputs", templateData),
+		renderSection(tmpl, "objects", templateData),
+		renderSection(tmpl, "reference_links", templateData),
 	}
+
+	templateOutput := strings.TrimSpace(strings.Join(sections, "\n\n"))
+	// Remove empty strings from the final output
+	parts := make([]string, 0)
+	for _, s := range strings.Split(templateOutput, "\n\n") {
+		if strings.TrimSpace(s) != "" {
+			parts = append(parts, s)
+		}
+	}
+	templateOutput = strings.Join(parts, "\n\n")
 
 	// Replace content between HTML comments
 	updatedContent := replaceContentBetweenMarkers(
 		string(readmeContent),
 		ExtrasMarkerStart,
 		ExtrasMarkerEnd,
-		templateOutput.String(),
+		templateOutput,
 	)
 
 	// Write the updated content back to README.md

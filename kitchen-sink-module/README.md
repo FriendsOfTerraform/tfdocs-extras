@@ -3,25 +3,9 @@
 This module exists purely as fixture content to exercise parsing and rendering edge cases.
 
 <!-- TFDOCS_EXTRAS_START -->
-
-
-
-
-
-
 ## Inputs
 
 ### Required
-
-
-
-    
-
-    
-
-    
-
-    
 
     
 <table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>Default&nbsp;Value</th></tr></thead><tbody>
@@ -32,8 +16,6 @@ This module exists purely as fixture content to exercise parsing and rendering e
 <tr><td colspan="3">
 
 Identifier that follows a strict pattern.
-
-    
 
     
 **Regex Pattern:**
@@ -47,10 +29,6 @@ Example Matches:
 - `abcd4`
 - `efgh_`
 - `ijkl-`
-
-    
-
-    
 
     
 **Since:** 1.2.0
@@ -67,14 +45,8 @@ Example Matches:
 Required primitive string.
 
     
-
-    
-
-    
 **Examples:**
 - [Production]("production")
-
-    
 
     
 **Since:** 1.0.0
@@ -86,16 +58,6 @@ Required primitive string.
 
 
 ### Optional
-
-
-
-    
-
-    
-
-    
-
-    
 
     
 <table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>Default&nbsp;Value</th></tr></thead><tbody>
@@ -122,14 +84,6 @@ code_fence_examples = {
 ~~~
 
     
-
-    
-
-    
-
-    
-
-    
 **Since:** 1.1.0
         
 
@@ -142,14 +96,6 @@ code_fence_examples = {
 <tr><td colspan="3">
 
 Deeply nested object that mixes required and optional fields.
-
-    
-
-    
-
-    
-
-    
 
     
 **Since:** 3.0.0
@@ -171,14 +117,6 @@ Enum-like string values.
 - `staging`
 - `production`
 
-    
-
-    
-
-    
-
-    
-
 
 </td></tr>
 <tr>
@@ -190,16 +128,8 @@ Enum-like string values.
 List of objects where some properties are documented and others are not.
 
     
-
-    
-
-    
 **Examples:**
 - [Minimal item]("[{ name = \"api\", port = 8080 }]")
-
-    
-
-    
 
 
 </td></tr>
@@ -210,14 +140,6 @@ List of objects where some properties are documented and others are not.
 <tr><td colspan="3">
 
 Optional list(string) represented via default empty list.
-
-    
-
-    
-
-    
-
-    
 
     
 **Since:** 1.0.0
@@ -234,14 +156,6 @@ Optional list(string) represented via default empty list.
 Map of documented object definitions.
 
     
-
-    
-
-    
-
-    
-
-    
 **Since:** 2.0.0
         
 
@@ -256,18 +170,12 @@ Map of documented object definitions.
 Demonstrates named and reference links.
 
     
-
-    
-
-    
 **Examples:**
 - [Functions docs](#terraform-functions)
 
     
 **Links:**
 - [Terraform Type Constraints](https://developer.hashicorp.com/terraform/language/expressions/type-constraints)
-
-    
 
 
 </td></tr>
@@ -278,16 +186,6 @@ Demonstrates named and reference links.
 <tr><td colspan="3">
 
 Uses block-style docs in object property type definitions.
-
-    
-
-    
-
-    
-
-    
-
-    
 
 
 </td></tr>
@@ -300,14 +198,6 @@ Uses block-style docs in object property type definitions.
 Optional number with an explicit default.
 
     
-
-    
-
-    
-
-    
-
-    
 **Since:** 1.0.0
         
 **Deprecated:** Use `request_timeout_seconds` instead.
@@ -317,36 +207,17 @@ Optional number with an explicit default.
 </td></tr>
 </tbody></table>
 
-
 ## Outputs
-
-
-
-    
-
-    
-
-    
-
-    
 
     
 <table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>Sensitive</th></tr></thead><tbody>
         <tr>
-    <td><code>map(object(<a href="#documented_map">documented_map</a>))</code></td>
+    <td><code>map(object(<a href="#outputdocumented_map">output.documented_map</a>))</code></td>
     <td width="100%">documented_map</td><td></td>
 </tr>
 <tr><td colspan="3">
 
 Pass-through for documented map(object(...)) input.
-
-    
-
-    
-
-    
-
-    
 
     
 **Since:** 2.0.0
@@ -363,14 +234,6 @@ Pass-through for documented map(object(...)) input.
 Echoes the required string input.
 
     
-
-    
-
-    
-
-    
-
-    
 **Since:** 1.0.0
         
 
@@ -384,16 +247,6 @@ Echoes the required string input.
 
 Sensitive summary value for output handling tests.
 
-    
-
-    
-
-    
-
-    
-
-    
-
 
 </td></tr>
 <tr>
@@ -404,115 +257,13 @@ Sensitive summary value for output handling tests.
 
 Extracted list of service ports.
 
-    
-
-    
-
-    
-
-    
-
-    
-
 
 </td></tr>
 </tbody></table>
-
-
 
 ## Objects
 
-
-
-#### autoscaling_profiles
-
-Nested map(object(...)) for autoscaling profiles.
-
-    
-
-    
-
-    
-
-    
-
-    
-<table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>Required</th><th>Default&nbsp;Value</th></tr></thead><tbody>
-        <tr>
-    <td><code>number</code></td>
-    <td width="100%">min</td><td>Yes</td><td><em>n/a</em></td>
-</tr>
-<tr><td colspan="4">
-
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-
-</td></tr>
-<tr>
-    <td><code>number</code></td>
-    <td width="100%">max</td><td>Yes</td><td><em>n/a</em></td>
-</tr>
-<tr><td colspan="4">
-
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-
-</td></tr>
-<tr>
-    <td><code>number</code></td>
-    <td width="100%">target_cpu</td><td></td><td><code>70</code></td>
-</tr>
-<tr><td colspan="4">
-
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-
-</td></tr>
-</tbody></table>
-
-
-
 #### code_fence_examples
-
-
-
-    
-
-    
-
-    
-
-    
 
     
 <table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>Required</th><th>Default&nbsp;Value</th></tr></thead><tbody>
@@ -523,18 +274,6 @@ Nested map(object(...)) for autoscaling profiles.
 <tr><td colspan="4">
 
 
-
-    
-
-    
-
-    
-
-    
-
-    
-
-
 </td></tr>
 <tr>
     <td><code>list(string)</code></td>
@@ -543,34 +282,10 @@ Nested map(object(...)) for autoscaling profiles.
 <tr><td colspan="4">
 
 
-
-    
-
-    
-
-    
-
-    
-
-    
-
-
 </td></tr>
 </tbody></table>
 
-
-
 #### deeply_nested_object
-
-
-
-    
-
-    
-
-    
-
-    
 
     
 <table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>Required</th><th>Default&nbsp;Value</th></tr></thead><tbody>
@@ -582,16 +297,6 @@ Nested map(object(...)) for autoscaling profiles.
 
 Required top-level name.
 
-    
-
-    
-
-    
-
-    
-
-    
-
 
 </td></tr>
 <tr>
@@ -602,53 +307,23 @@ Required top-level name.
 
 Optional top-level toggle.
 
-    
-
-    
-
-    
-
-    
-
-    
-
 
 </td></tr>
 <tr>
-    <td><code>object(<a href="#deployment">deployment</a>)</code></td>
+    <td><code>object(<a href="#deeply_nested_objectdeployment">deeply_nested_object.deployment</a>)</code></td>
     <td width="100%">deployment</td><td></td><td><code>null</code></td>
 </tr>
 <tr><td colspan="4">
 
 Optional nested object with null default semantics.
 
-    
-
-    
-
-    
-
-    
-
-    
-
 
 </td></tr>
 </tbody></table>
 
-
-
-#### deployment
+#### deeply_nested_object.deployment
 
 Optional nested object with null default semantics.
-
-    
-
-    
-
-    
-
-    
 
     
 <table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>Required</th><th>Default&nbsp;Value</th></tr></thead><tbody>
@@ -660,16 +335,6 @@ Optional nested object with null default semantics.
 
 Required region for deployment.
 
-    
-
-    
-
-    
-
-    
-
-    
-
 
 </td></tr>
 <tr>
@@ -679,16 +344,6 @@ Required region for deployment.
 <tr><td colspan="4">
 
 Optional replica count.
-
-    
-
-    
-
-    
-
-    
-
-    
 
 
 </td></tr>
@@ -700,327 +355,53 @@ Optional replica count.
 
 Optional list of zones.
 
-    
-
-    
-
-    
-
-    
-
-    
-
 
 </td></tr>
 <tr>
-    <td><code>map(object(<a href="#autoscaling_profiles">autoscaling_profiles</a>))</code></td>
+    <td><code>map(object(<a href="#deeply_nested_objectdeploymentautoscaling_profiles">deeply_nested_object.deployment.autoscaling_profiles</a>))</code></td>
     <td width="100%">autoscaling_profiles</td><td></td><td><code>{}</code></td>
 </tr>
 <tr><td colspan="4">
 
 Nested map(object(...)) for autoscaling profiles.
 
-    
-
-    
-
-    
-
-    
-
-    
-
 
 </td></tr>
 </tbody></table>
 
+#### deeply_nested_object.deployment.autoscaling_profiles
 
-
-#### details
-
-
-
-    
-
-    
-
-    
-
-    
+Nested map(object(...)) for autoscaling profiles.
 
     
 <table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>Required</th><th>Default&nbsp;Value</th></tr></thead><tbody>
         <tr>
-    <td><code>string</code></td>
-    <td width="100%">title</td><td>Yes</td><td><em>n/a</em></td>
+    <td><code>number</code></td>
+    <td width="100%">min</td><td>Yes</td><td><em>n/a</em></td>
 </tr>
 <tr><td colspan="4">
-
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-
-</td></tr>
-<tr>
-    <td><code>string</code></td>
-    <td width="100%">body</td><td>Yes</td><td><em>n/a</em></td>
-</tr>
-<tr><td colspan="4">
-
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-
-</td></tr>
-</tbody></table>
-
-
-
-#### documented_map
-
-
-
-    
-
-    
-
-    
-
-    
-
-    
-<table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>Required</th><th>Default&nbsp;Value</th></tr></thead><tbody>
-        <tr>
-    <td><code>string</code></td>
-    <td width="100%">display_name</td><td>Yes</td><td><em>n/a</em></td>
-</tr>
-<tr><td colspan="4">
-
-Human-friendly display name.
-
-    
-
-    
-
-    
-
-    
-
-    
-
-
-</td></tr>
-<tr>
-    <td><code>string</code></td>
-    <td width="100%">tier</td><td>Yes</td><td><em>n/a</em></td>
-</tr>
-<tr><td colspan="4">
-
-Environment tier.
-
-    
-
-    
-
-    
-
-    
-
-    
-
-
-</td></tr>
-<tr>
-    <td><code>list(string)</code></td>
-    <td width="100%">tags</td><td></td><td><code>[]</code></td>
-</tr>
-<tr><td colspan="4">
-
-Optional tags for each object.
-
-    
-
-    
-
-    
-
-    
-
-    
-
-
-</td></tr>
-<tr>
-    <td><code>map(string)</code></td>
-    <td width="100%">metadata</td><td></td><td><code>{}</code></td>
-</tr>
-<tr><td colspan="4">
-
-Optional metadata map.
-
-    
-
-    
-
-    
-
-    
-
-    
-
-
-</td></tr>
-</tbody></table>
-
-
-
-#### health_check
-
-
-
-    
-
-    
-
-    
-
-    
-
-    
-<table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>Required</th><th>Default&nbsp;Value</th></tr></thead><tbody>
-        <tr>
-    <td><code>string</code></td>
-    <td width="100%">path</td><td></td><td><code>"/healthz"</code></td>
-</tr>
-<tr><td colspan="4">
-
-
-
-    
-
-    
-
-    
-
-    
-
-    
 
 
 </td></tr>
 <tr>
     <td><code>number</code></td>
-    <td width="100%">interval_seconds</td><td></td><td><code>30</code></td>
+    <td width="100%">max</td><td>Yes</td><td><em>n/a</em></td>
 </tr>
 <tr><td colspan="4">
-
-
-
-    
-
-    
-
-    
-
-    
-
-    
 
 
 </td></tr>
 <tr>
     <td><code>number</code></td>
-    <td width="100%">timeout_seconds</td><td></td><td><code>5</code></td>
+    <td width="100%">target_cpu</td><td></td><td><code>70</code></td>
 </tr>
 <tr><td colspan="4">
-
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-
-</td></tr>
-<tr>
-    <td><code>list(number)</code></td>
-    <td width="100%">expected_statuses</td><td></td><td><code>[200]</code></td>
-</tr>
-<tr><td colspan="4">
-
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-
-</td></tr>
-<tr>
-    <td><code>bool</code></td>
-    <td width="100%">enable_status_check</td><td></td><td><code>true</code></td>
-</tr>
-<tr><td colspan="4">
-
-
-
-    
-
-    
-
-    
-
-    
-
-    
 
 
 </td></tr>
 </tbody></table>
-
-
 
 #### list_of_objects_mixed_docs
-
-
-
-    
-
-    
-
-    
-
-    
 
     
 <table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>Required</th><th>Default&nbsp;Value</th></tr></thead><tbody>
@@ -1032,16 +413,6 @@ Optional metadata map.
 
 Name of the service.
 
-    
-
-    
-
-    
-
-    
-
-    
-
 
 </td></tr>
 <tr>
@@ -1052,16 +423,6 @@ Name of the service.
 
 Public port for the service.
 
-    
-
-    
-
-    
-
-    
-
-    
-
 
 </td></tr>
 <tr>
@@ -1071,54 +432,64 @@ Public port for the service.
 <tr><td colspan="4">
 
 
-
-    
-
-    
-
-    
-
-    
-
-    
-
-
 </td></tr>
 <tr>
-    <td><code>object(<a href="#health_check">health_check</a>)</code></td>
+    <td><code>object(<a href="#list_of_objects_mixed_docshealth_check">list_of_objects_mixed_docs.health_check</a>)</code></td>
     <td width="100%">health_check</td><td></td><td><code>null</code></td>
 </tr>
 <tr><td colspan="4">
 
 
+</td></tr>
+</tbody></table>
+
+#### list_of_objects_mixed_docs.health_check
 
     
+<table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>Required</th><th>Default&nbsp;Value</th></tr></thead><tbody>
+        <tr>
+    <td><code>string</code></td>
+    <td width="100%">path</td><td></td><td><code>"/healthz"</code></td>
+</tr>
+<tr><td colspan="4">
 
-    
 
-    
+</td></tr>
+<tr>
+    <td><code>number</code></td>
+    <td width="100%">interval_seconds</td><td></td><td><code>30</code></td>
+</tr>
+<tr><td colspan="4">
 
-    
 
-    
+</td></tr>
+<tr>
+    <td><code>number</code></td>
+    <td width="100%">timeout_seconds</td><td></td><td><code>5</code></td>
+</tr>
+<tr><td colspan="4">
+
+
+</td></tr>
+<tr>
+    <td><code>list(number)</code></td>
+    <td width="100%">expected_statuses</td><td></td><td><code>[200]</code></td>
+</tr>
+<tr><td colspan="4">
+
+
+</td></tr>
+<tr>
+    <td><code>bool</code></td>
+    <td width="100%">enable_status_check</td><td></td><td><code>true</code></td>
+</tr>
+<tr><td colspan="4">
 
 
 </td></tr>
 </tbody></table>
 
-
-
 #### map_of_objects_documented
-
-
-
-    
-
-    
-
-    
-
-    
 
     
 <table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>Required</th><th>Default&nbsp;Value</th></tr></thead><tbody>
@@ -1129,14 +500,6 @@ Public port for the service.
 <tr><td colspan="4">
 
 Human-friendly display name.
-
-    
-
-    
-
-    
-
-    
 
     
 **Since:** 1.0.0
@@ -1158,14 +521,6 @@ Environment tier.
 - `stage`
 - `prod`
 
-    
-
-    
-
-    
-
-    
-
 
 </td></tr>
 <tr>
@@ -1175,16 +530,6 @@ Environment tier.
 <tr><td colspan="4">
 
 Optional tags for each object.
-
-    
-
-    
-
-    
-
-    
-
-    
 
 
 </td></tr>
@@ -1196,33 +541,11 @@ Optional tags for each object.
 
 Optional metadata map.
 
-    
-
-    
-
-    
-
-    
-
-    
-
 
 </td></tr>
 </tbody></table>
 
-
-
 #### object_with_block_comment_docs
-
-
-
-    
-
-    
-
-    
-
-    
 
     
 <table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>Required</th><th>Default&nbsp;Value</th></tr></thead><tbody>
@@ -1233,14 +556,6 @@ Optional metadata map.
 <tr><td colspan="4">
 
 Primary key.
-
-    
-
-    
-
-    
-
-    
 
     
 **Since:** 1.0.0
@@ -1257,46 +572,88 @@ Primary key.
 Optional summary.
 
     
-
-    
-
-    
-
-    
-
-    
 **Deprecated:** Prefer `details`.
         
 
 
 </td></tr>
 <tr>
-    <td><code>object(<a href="#details">details</a>)</code></td>
+    <td><code>object(<a href="#object_with_block_comment_docsdetails">object_with_block_comment_docs.details</a>)</code></td>
     <td width="100%">details</td><td></td><td><code>null</code></td>
 </tr>
 <tr><td colspan="4">
 
 
+</td></tr>
+</tbody></table>
+
+#### object_with_block_comment_docs.details
 
     
+<table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>Required</th><th>Default&nbsp;Value</th></tr></thead><tbody>
+        <tr>
+    <td><code>string</code></td>
+    <td width="100%">title</td><td>Yes</td><td><em>n/a</em></td>
+</tr>
+<tr><td colspan="4">
 
-    
 
-    
-
-    
-
-    
+</td></tr>
+<tr>
+    <td><code>string</code></td>
+    <td width="100%">body</td><td>Yes</td><td><em>n/a</em></td>
+</tr>
+<tr><td colspan="4">
 
 
 </td></tr>
 </tbody></table>
 
+#### output.documented_map
+
+    
+<table><thead><tr><th>Type</th><th align="left" width="100%">Name</th><th>Required</th><th>Default&nbsp;Value</th></tr></thead><tbody>
+        <tr>
+    <td><code>string</code></td>
+    <td width="100%">display_name</td><td>Yes</td><td><em>n/a</em></td>
+</tr>
+<tr><td colspan="4">
+
+Human-friendly display name.
 
 
+</td></tr>
+<tr>
+    <td><code>string</code></td>
+    <td width="100%">tier</td><td>Yes</td><td><em>n/a</em></td>
+</tr>
+<tr><td colspan="4">
 
+Environment tier.
+
+
+</td></tr>
+<tr>
+    <td><code>list(string)</code></td>
+    <td width="100%">tags</td><td></td><td><code>[]</code></td>
+</tr>
+<tr><td colspan="4">
+
+Optional tags for each object.
+
+
+</td></tr>
+<tr>
+    <td><code>map(string)</code></td>
+    <td width="100%">metadata</td><td></td><td><code>{}</code></td>
+</tr>
+<tr><td colspan="4">
+
+Optional metadata map.
+
+
+</td></tr>
+</tbody></table>
 
 [terraform-functions]: https://developer.hashicorp.com/terraform/language/functions
-
-
 <!-- TFDOCS_EXTRAS_END -->

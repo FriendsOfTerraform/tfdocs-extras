@@ -85,9 +85,10 @@
 </td></tr>
 {{end}}
 
-## Inputs
+{{define "inputs" -}}
+{{heading 0}} Inputs
 
-### Required
+{{heading 1}} Required
 
 {{if eq (len .RequiredInputs.Rows) 0 -}}
     _No required inputs._
@@ -96,29 +97,36 @@
 {{end}}
 
 {{if gt (len .OptionalInputs.Rows) 0 -}}
-### Optional
+{{heading 1}} Optional
 
 {{template "table" .OptionalInputs}}
 {{end}}
+{{- end}}
 
+{{define "outputs" -}}
 {{if gt (len .Outputs.Rows) 0 -}}
-## Outputs
+{{heading 0}} Outputs
 
 {{template "table" .Outputs}}
 {{end}}
+{{- end}}
 
+{{define "objects" -}}
 {{if gt (len .Objects) 0}}
-## Objects
+{{heading 0}} Objects
 
 {{range $key, $input := .Objects}}
 
-#### {{$key}}
+{{heading 2}} {{$key}}
 
 {{template "table" $input}}
 
 {{end}}
 {{end}}
+{{- end}}
 
+{{define "reference_links" -}}
 {{range $key, $value := .ReferenceLinks}}
 [{{$key}}]: {{$value}}
 {{end}}
+{{- end}}
