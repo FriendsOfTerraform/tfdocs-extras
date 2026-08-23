@@ -1,6 +1,7 @@
 package tfdocsextras
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -135,14 +136,14 @@ func TestParseModuleArgsIntoManifest_OutputsWithComplexType(t *testing.T) {
 		t.Fatalf("Output rows count mismatch:\n%v", diff)
 	}
 
-	if _, exists := manifest.Objects["nat_gateways"]; !exists {
+	if _, exists := manifest.Objects["output.nat_gateways"]; !exists {
 		t.Error("Expected nat_gateways nested object to be recorded")
 	}
 
-	complexTypeStr := "nat_gateways"
+	complexTypeStr := "output.nat_gateways"
 	expectedOutput := Argument{
 		ParentType:  Output,
-		Type:        "map(object(nat_gateways))",
+		Type:        "map(object(output.nat_gateways))",
 		ComplexType: &complexTypeStr,
 		Name:        "nat_gateways",
 		Description: "Map of NAT gateways",
@@ -161,7 +162,7 @@ func TestParseModuleArgsIntoManifest_OutputsWithComplexType(t *testing.T) {
 		t.Errorf("Output mismatch:\n%v", diff)
 	}
 
-	natGatewaysObj := manifest.Objects["nat_gateways"]
+	natGatewaysObj := manifest.Objects["output.nat_gateways"]
 	if diff := deep.Equal(len(natGatewaysObj.Rows), 2); diff != nil {
 		t.Errorf("nat_gateways field count mismatch:\n%v", diff)
 	}
@@ -279,21 +280,21 @@ func TestParseModuleArgsIntoManifest_OutputsWithNestedObjects(t *testing.T) {
 		t.Fatalf("Output rows count mismatch:\n%v", diff)
 	}
 
-	expectedObjects := []string{"config", "server", "database"}
+	expectedObjects := []string{"output.config", "output.config.server", "output.config.database"}
 	for _, objName := range expectedObjects {
 		if _, exists := manifest.Objects[objName]; !exists {
 			t.Errorf("Expected nested object '%s' to be recorded", objName)
 		}
 	}
 
-	configObj := manifest.Objects["config"]
+	configObj := manifest.Objects["output.config"]
 	if diff := deep.Equal(len(configObj.Rows), 2); diff != nil {
 		t.Errorf("config field count mismatch:\n%v", diff)
 	}
 
-	serverComplexType := "server"
+	serverComplexType := "output.config.server"
 	expectedServerField := Argument{
-		Type:        "object(server)",
+		Type:        "object(output.config.server)",
 		ComplexType: &serverComplexType,
 		Name:        "server",
 	}
@@ -306,9 +307,9 @@ func TestParseModuleArgsIntoManifest_OutputsWithNestedObjects(t *testing.T) {
 		t.Errorf("Server field mismatch:\n%v", diff)
 	}
 
-	databaseComplexType := "database"
+	databaseComplexType := "output.config.database"
 	expectedDatabaseField := Argument{
-		Type:        "object(database)",
+		Type:        "object(output.config.database)",
 		ComplexType: &databaseComplexType,
 		Name:        "database",
 	}
@@ -469,7 +470,7 @@ func TestCreateArgumentFromDocBlock(t *testing.T) {
 		},
 	}
 
-	arg := createArgumentFromDocBlock(RequiredInput, "test_arg", "string", docBlk, nil, manifest)
+	arg := createArgumentFromDocBlock(RequiredInput, "test_arg", "string", docBlk, nil, "test_arg", manifest)
 
 	if len(arg.ArgumentMetadata.Attributes) == 0 {
 		t.Error("Expected @since directive to be processed into attributes")
@@ -553,4 +554,158 @@ func TestFindTypeDirective_EmptyList(t *testing.T) {
 	if diff := deep.Equal(result, nilDirective); diff != nil {
 		t.Errorf("Expected nil for empty directives list:\n%v", diff)
 	}
+}
+
+// TestParseModuleArgsIntoManifest_NestedObjectsWithTheSameName covers two
+// inputs that each declare a nested object called `details`. Keyed by the
+// field name alone they collapsed into one entry, so the second silently
+// overwrote the first and the first input's table linked to the wrong type.
+func TestParseModuleArgsIntoManifest_NestedObjectsWithTheSameName(t *testing.T) {
+	inputs := []*terraform.Input{
+		{
+			Name:        "alpha",
+			Description: "Alpha.",
+			Required:    true,
+			Type: `object({
+  /// Alpha's details.
+  details = optional(object({
+    alpha_only = string
+  }), null)
+})`,
+		},
+		{
+			Name:        "beta",
+			Description: "Beta.",
+			Required:    true,
+			Type: `object({
+  /// Beta's details.
+  details = optional(object({
+    beta_only = number
+  }), null)
+})`,
+		},
+	}
+
+	manifest := ParseModuleArgsIntoManifest(inputs, []*terraform.Output{})
+
+	expected := []string{"alpha", "alpha.details", "beta", "beta.details"}
+	if diff := deep.Equal(objectTypeNames(manifest), expected); diff != nil {
+		t.Fatalf("Object type names mismatch:\n%v", diff)
+	}
+
+	// Each nested object keeps its own fields.
+	if diff := deep.Equal(fieldNames(manifest.Objects["alpha.details"]), []string{"alpha_only"}); diff != nil {
+		t.Errorf("alpha.details field mismatch:\n%v", diff)
+	}
+	if diff := deep.Equal(fieldNames(manifest.Objects["beta.details"]), []string{"beta_only"}); diff != nil {
+		t.Errorf("beta.details field mismatch:\n%v", diff)
+	}
+
+	// And each parent links to its own, in both the type and the anchor.
+	details := manifest.Objects["alpha"].Rows[0]
+	if diff := deep.Equal(*details.ComplexType, "alpha.details"); diff != nil {
+		t.Errorf("alpha's details complex type mismatch:\n%v", diff)
+	}
+	if diff := deep.Equal(details.Type, "object(alpha.details)"); diff != nil {
+		t.Errorf("alpha's details type mismatch:\n%v", diff)
+	}
+	if diff := deep.Equal(details.GetAnchor(), "alphadetails"); diff != nil {
+		t.Errorf("alpha's details anchor mismatch:\n%v", diff)
+	}
+	if diff := deep.Equal(details.GetParentType(), [2]string{"object(", ")"}); diff != nil {
+		t.Errorf("alpha's details parent type mismatch:\n%v", diff)
+	}
+}
+
+// TestParseModuleArgsIntoManifest_InputAndOutputWithTheSameName covers a
+// module that passes an object input straight back out under the same name.
+// Both object types claimed the same entry, and the input's was the one lost.
+func TestParseModuleArgsIntoManifest_InputAndOutputWithTheSameName(t *testing.T) {
+	inputs := []*terraform.Input{
+		{
+			Name:        "listener",
+			Description: "Listener input.",
+			Required:    true,
+			Type: `object({
+  /// Input side port.
+  port = number
+})`,
+		},
+	}
+
+	outputs := []*terraform.Output{
+		{
+			Name: "listener",
+			Description: `Listener output.
+
+@type object({
+  /// Output side hostname.
+  hostname = string
+})`,
+		},
+	}
+
+	manifest := ParseModuleArgsIntoManifest(inputs, outputs)
+
+	expected := []string{"listener", "output.listener"}
+	if diff := deep.Equal(objectTypeNames(manifest), expected); diff != nil {
+		t.Fatalf("Object type names mismatch:\n%v", diff)
+	}
+
+	if diff := deep.Equal(fieldNames(manifest.Objects["listener"]), []string{"port"}); diff != nil {
+		t.Errorf("Input object type mismatch:\n%v", diff)
+	}
+	if diff := deep.Equal(fieldNames(manifest.Objects["output.listener"]), []string{"hostname"}); diff != nil {
+		t.Errorf("Output object type mismatch:\n%v", diff)
+	}
+
+	if diff := deep.Equal(*manifest.Outputs.Rows[0].ComplexType, "output.listener"); diff != nil {
+		t.Errorf("Output complex type mismatch:\n%v", diff)
+	}
+	if diff := deep.Equal(*manifest.RequiredInputs.Rows[0].ComplexType, "listener"); diff != nil {
+		t.Errorf("Input complex type mismatch:\n%v", diff)
+	}
+}
+
+// TestAnchorFor pins the anchor to what a markdown renderer derives from the
+// heading of the same name, which is what the object tables link to.
+func TestAnchorFor(t *testing.T) {
+	tests := []struct {
+		name     string
+		expected string
+	}{
+		{"health_check", "health_check"},
+		{"listener.health_check", "listenerhealth_check"},
+		{"output.Config", "outputconfig"},
+		{"deeply.nested.object", "deeplynestedobject"},
+		{"with space", "with-space"},
+		{"keeps-dashes", "keeps-dashes"},
+	}
+
+	for _, tt := range tests {
+		if diff := deep.Equal(anchorFor(tt.name), tt.expected); diff != nil {
+			t.Errorf("Anchor for %q mismatch:\n%v", tt.name, diff)
+		}
+	}
+}
+
+// objectTypeNames returns the recorded object type names, sorted, which is the
+// order the Objects section renders them in.
+func objectTypeNames(manifest *ModuleManifest) []string {
+	names := make([]string, 0, len(manifest.Objects))
+	for name := range manifest.Objects {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	return names
+}
+
+func fieldNames(group ArgumentGroup) []string {
+	names := make([]string, 0, len(group.Rows))
+	for _, row := range group.Rows {
+		names = append(names, row.Name)
+	}
+
+	return names
 }
